@@ -50,8 +50,8 @@ public:
 
     string(const string &s);
     string &operator=(const string &s);
-    string(string &&s);
-    string &operator=(string &&s);
+    string(string &&s) noexcept;
+    string &operator=(string &&s) noexcept;
     ~string();
 
     size_t size() {
@@ -91,8 +91,8 @@ public:
     array(size_t length);
     array(const array &arr);
     array &operator=(const array &arr);
-    array(array &&arr);
-    array &operator=(array &&arr);
+    array(array &&arr) noexcept;
+    array &operator=(array &&arr) noexcept;
     jst_node &operator[](int index);
     ~array();
 

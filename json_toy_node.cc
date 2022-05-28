@@ -15,20 +15,20 @@ jnd_type *jst_node::jst_node_data_p_get(jst_node_data *data) const {
 }
 
 template <typename jnd_type>
-jnd_type &jst_node::jst_node_data_mem_get(jst_node_data *data) const {
-    return *dynamic_cast<jnd_type *>(data);
+jnd_type &jst_node::jst_node_data_mem_get(jst_node_data &data) const {
+    return dynamic_cast<jnd_type &>(data);
 }
 
-jst_node_data *jst_node::jst_node_data_copy(jst_node_data *jnd) {
+shared_ptr<jst_node_data> jst_node::jst_node_data_copy(shared_ptr<jst_node_data> jnd) {
     if (type == JST_STR) {
-        auto &node_data = jst_node_data_mem_get<string>(jnd);
-        return new string(node_data);
+        auto &node_data = jst_node_data_mem_get<string>(*jnd);
+        return std::make_shared<string>(string(node_data));
     } else if (type == JST_NUM) {
-        auto &node_data = jst_node_data_mem_get<number>(jnd);
-        return new number(node_data);
+        auto &node_data = jst_node_data_mem_get<number>(*jnd);
+        return std::make_shared<number>(number(node_data));
     } else if (type == JST_ARR) {
-        auto &node_data = jst_node_data_mem_get<array>(jnd);
-        return new array(node_data);
+        auto &node_data = jst_node_data_mem_get<array>(*jnd);
+        return std::make_shared<array>(array(node_data));
     } else
         return nullptr;
 }
@@ -48,12 +48,12 @@ jst_node::jst_node(jst_type t, const char *str, size_t len) : type(JST_NULL), da
 jst_node::jst_node(jst_type t, double num) : type(JST_NULL), data(nullptr) {
     assert(t == JST_NUM);
     type = t;
-    this->data = new number(num);
+    this->data = std::make_shared<number>(number(num));
 }
 
 jst_node::jst_node(jst_type t, array &arr) : type(JST_ARR), data(nullptr) {
     assert(t == JST_ARR);
-    this->data = new array(arr);
+    this->data = std::make_shared<array>(array(arr));
 }
 
 // copy construct
@@ -68,14 +68,12 @@ jst_node::jst_node(const jst_node &node) : type(node.type) {
 // assigment construct
 jst_node &jst_node::operator=(const jst_node &node) {
     type = node.type;
-    if (this->data != nullptr)
-        delete this->data;
     this->data = jst_node_data_copy(node.data);
     return *this;
 }
 
 // move copy construct
-jst_node::jst_node(jst_node &&node) : type(node.type), data(node.data) {
+jst_node::jst_node(jst_node &&node) : type(node.type), data(std::move(node.data)) {
     node.data = nullptr;
     node.type = JST_NULL;
 }
@@ -83,9 +81,7 @@ jst_node::jst_node(jst_node &&node) : type(node.type), data(node.data) {
 // move assigment construct
 jst_node &jst_node::operator=(jst_node &&node) {
     this->type = node.type;
-    if (this->data != nullptr)
-        delete this->data;
-    this->data = node.data;
+    this->data = std::move(node.data);
     node.data = nullptr;
     node.type = JST_NULL;
 
@@ -95,15 +91,12 @@ jst_node &jst_node::operator=(jst_node &&node) {
 // deconstruct
 jst_node::~jst_node() {
     type = JST_NULL;
-    if (this->data != nullptr)
-        delete this->data;
     this->data = nullptr;
+    ;
 }
 
 // reset the node type as JST_NULL
 void jst_node::jst_node_type_reset() {
-    if (this->data != nullptr)
-        delete this->data;
     this->data = nullptr;
     type = JST_NULL;
 }
@@ -111,14 +104,14 @@ void jst_node::jst_node_type_reset() {
 // get the data of number node;
 void jst_node::jst_node_data_get(double &num) const {
     assert(type == JST_NUM);
-    auto this_data = jst_node_data_mem_get<number>(this->data);
+    auto &this_data = jst_node_data_mem_get<number>(*(this->data));
     num = this_data.num;
 }
 
 // get the data of string node;
 void jst_node::jst_node_data_get(std::string &str) const {
     assert(type == JST_STR);
-    auto this_data = jst_node_data_mem_get<string>(this->data);
+    auto &this_data = jst_node_data_mem_get<string>(*(this->data));
     char *str_head = nullptr;
     size_t len = 0;
     this_data.get_c_str(&str_head, len);
@@ -127,8 +120,8 @@ void jst_node::jst_node_data_get(std::string &str) const {
 
 void jst_node::jst_node_data_get(char **node_str, size_t &len) const {
     assert(type == JST_STR);
-    auto this_data = jst_node_data_p_get<string>(this->data);
-    this_data->get_c_str(node_str, len);
+    auto &this_data = jst_node_data_mem_get<string>(*(this->data));
+    this_data.get_c_str(node_str, len);
 }
 
 void jst_node::jst_node_data_get(bool &b) const {
@@ -138,13 +131,13 @@ void jst_node::jst_node_data_get(bool &b) const {
 
 void jst_node::jst_node_data_get(array &arr) const {
     assert(type == JST_ARR);
-    auto this_data = jst_node_data_p_get<array>(this->data);
-    arr = *this_data;
+    auto &this_data = jst_node_data_mem_get<array>(*(this->data));
+    arr = this_data;
 }
 
 size_t jst_node::jst_node_data_length_get() const {
     assert(type == JST_STR);
-    auto this_data = jst_node_data_mem_get<string>(this->data);
+    auto &this_data = jst_node_data_mem_get<string>(*(this->data));
     return this_data.size();
 }
 
@@ -192,17 +185,13 @@ jst_ret_type jst_node::jst_node_parser_num(const std::string &str) {
     std::string n_str = str.substr(0, index);
     double n = std::strtod(n_str.c_str(), NULL);
     ASSERT_JST_CONDATION(n == HUGE_VAL || n == -HUGE_VAL, (*this), JST_PARSE_NUMBER_TOO_BIG)
-    if (this->data != nullptr)
-        delete this->data;
-    this->data = new number(n);
+    this->data = std::make_shared<number>(number(n));
 
     return ret;
 }
 
 jst_ret_type jst_node::jst_node_parser_str(const char *str, size_t len) {
-    if (this->data != nullptr)
-        delete this->data;
-    this->data = new string(str, len);
+    this->data = std::make_shared<string>(string(str, len));
     return JST_PARSE_OK;
 }
 
@@ -217,16 +206,14 @@ jst_ret_type jst_node::jst_node_data_set(jst_type t, const char *str, size_t len
     else if (type == JST_STR)
         ret = jst_node_parser_str(str, len);
     if (ret != JST_PARSE_OK)
-        delete this->data;
+        this->data = nullptr;
     return ret;
 }
 
 jst_ret_type jst_node::jst_node_data_set(jst_type t, array &&arr) {
     assert(t == JST_ARR);
     type = t;
-    if (this->data != nullptr)
-        delete this->data;
-    this->data = new array(arr);
+    this->data = std::make_shared<array>(array(arr));
     return JST_PARSE_OK;
 }
 

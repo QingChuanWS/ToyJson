@@ -3,12 +3,14 @@
 
 #include "json_toy_enum.h"
 #include "json_toy_basic.h"
+#include <memory>
 
 namespace jst {
+using std::shared_ptr;
 
 class jst_node {
 public:
-    jst_node() : type(JST_NULL), data(nullptr){};
+    jst_node() : type(JST_NULL), data(){};
     jst_node(jst_type t, const char *str = nullptr, size_t len = 0);
     jst_node(jst_type t, double num);
     jst_node(jst_type t, array &arr);
@@ -37,15 +39,15 @@ private:
     jst_ret_type jst_node_parser_num(const std::string &str);
     jst_ret_type jst_node_parser_str(const char *str, size_t len);
 
-    jst_node_data* jst_node_data_copy(jst_node_data *jnd);
-    
+    shared_ptr<jst_node_data> jst_node_data_copy(shared_ptr<jst_node_data> jnd);
+
     template <typename jnd_type>
     jnd_type *jst_node_data_p_get(jst_node_data *data) const;
 
     template <typename jnd_type>
-    jnd_type &jst_node_data_mem_get(jst_node_data *data) const;
+    jnd_type &jst_node_data_mem_get(jst_node_data &data) const;
 
-    jst_node_data *data;
+    shared_ptr<jst_node_data> data;
     jst_type type;
 };
 

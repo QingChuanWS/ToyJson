@@ -31,14 +31,14 @@ string &string::operator=(const string &str) {
     return *this;
 }
 
-string::string(string &&str) : s(str.s), length(str.length) {
+string::string(string &&str) noexcept : s(str.s), length(str.length) {
     ASSERT_VECTOR_NO_RET(str.s, str.length, s, length);
     str.s = nullptr;
     str.length = 0;
     return;
 }
 
-string &string::operator=(string &&str) {
+string &string::operator=(string &&str) noexcept {
     ASSERT_VECTOR_HAS_RET(str.s, str.length, s, length, *this);
     if (this->s != nullptr)
         delete this->s;
@@ -80,13 +80,13 @@ array &array::operator=(const array &arr) {
     return *this;
 }
 
-array::array(array &&arr) : a(arr.a), length(arr.length) {
+array::array(array &&arr) noexcept : a(arr.a), length(arr.length) {
     ASSERT_VECTOR_NO_RET(arr.a, arr.length, a, length);
     arr.a = nullptr;
     arr.length = 0;
 }
 
-array &array::operator=(array &&arr) {
+array &array::operator=(array &&arr) noexcept {
     ASSERT_VECTOR_HAS_RET(arr.a, arr.length, a, length, *this);
     if (this->a != nullptr)
         delete this->a;
