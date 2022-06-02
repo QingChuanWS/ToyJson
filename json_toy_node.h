@@ -10,7 +10,7 @@ using std::shared_ptr;
 
 class jst_node {
 public:
-    jst_node() : type(JST_NULL), data(){};
+    jst_node() : type(JST_NULL), data(nullptr){};
     jst_node(jst_type t, const char *str = nullptr, size_t len = 0);
     jst_node(jst_type t, double num);
     jst_node(jst_type t, array &arr);
@@ -21,18 +21,23 @@ public:
     }
 
     jst_node(const jst_node &node);
-    jst_node(jst_node &&node);
+    jst_node(jst_node &&node) noexcept;
     jst_node &operator=(const jst_node &node);
-    jst_node &operator=(jst_node &&node);
+    jst_node &operator=(jst_node &&node) noexcept;
     ~jst_node();
 
-    jst_ret_type jst_node_data_set(jst_type t, const char *str = nullptr, size_t len = 0);
+    jst_ret_type jst_node_data_set(jst_type t, const char *str = nullptr, const size_t len = 0);
+    jst_ret_type jst_node_data_set(jst_type t, string && s);
     jst_ret_type jst_node_data_set(jst_type t, array &&arr);
+    jst_ret_type jst_node_data_set(jst_type t, object &&obj);
+
     void jst_node_data_get(std::string &node_str) const;
     void jst_node_data_get(char **node_str, size_t &len) const;
     void jst_node_data_get(double &node_num) const;
     void jst_node_data_get(bool &node_bool) const;
     void jst_node_data_get(array &arr) const;
+    void jst_node_data_get(object &obj) const;
+
     size_t jst_node_data_length_get() const;
 
 private:
@@ -40,12 +45,6 @@ private:
     jst_ret_type jst_node_parser_str(const char *str, size_t len);
 
     shared_ptr<jst_node_data> jst_node_data_copy(shared_ptr<jst_node_data> jnd);
-
-    template <typename jnd_type>
-    jnd_type *jst_node_data_p_get(jst_node_data *data) const;
-
-    template <typename jnd_type>
-    jnd_type &jst_node_data_mem_get(jst_node_data &data) const;
 
     shared_ptr<jst_node_data> data;
     jst_type type;

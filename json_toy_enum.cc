@@ -12,7 +12,10 @@ const char *jst_ret_type_name[] = {"JST_PARSE_OK",
                                    "JST_PARSE_INVALID_STRING_CHAR",
                                    "JST_PARSE_INVALID_UNICODE_HEX",
                                    "JST_PARSE_INVALID_UNICODE_SURROGATE",
-                                   "JST_PARSE_MISS_COMMA_OR_SQUARE_BRACKET"};
+                                   "JST_PARSE_MISS_COMMA_OR_SQUARE_BRACKET", 
+                                   "JST_PARSE_MISS_KEY",
+                                   "JST_PARSE_MISS_COLON",
+                                   "JST_PARSE_MISS_COMMA_OR_CURLY_BRACKET"};
 
 const char *jst_node_type_name[] = {"JST_NULL", "JST_TRUE", "JST_FALSE", "JST_NUM", "JST_STR", "JST_ARR", "JST_OBJ"};
 } // namespace jst

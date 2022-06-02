@@ -28,12 +28,15 @@ public:
     jst_node root;
 
 private:
-    jst_ret_type jst_val_parser(jst_node &node);
+    jst_ret_type jst_val_parser(jst_node &node, bool is_local = false);
 
     jst_ret_type jst_val_parser_symbol(jst_node &node);
     jst_ret_type jst_val_parser_number(jst_node &node);
+    jst_ret_type jst_val_parser_string_base(string &s);
     jst_ret_type jst_val_parser_string(jst_node &node);
     jst_ret_type jst_val_parser_array(jst_node &node);
+    jst_ret_type jst_val_parser_object_member(object_member & objm);
+    jst_ret_type jst_val_parser_object(jst_node &node);
     jst_ret_type jst_ws_parser(jst_ws_state state, jst_type t = JST_NULL);
     // parser spefical char
     inline jst_ret_type jst_val_parser_str_sp(int &char_index, std::vector<char> &sp_char);

@@ -10,12 +10,7 @@
 namespace jst {
 
 template <typename jnd_type>
-jnd_type *jst_node::jst_node_data_p_get(jst_node_data *data) const {
-    return dynamic_cast<jnd_type *>(data);
-}
-
-template <typename jnd_type>
-jnd_type &jst_node::jst_node_data_mem_get(jst_node_data &data) const {
+static jnd_type &jst_node_data_mem_get(jst_node_data &data) {
     return dynamic_cast<jnd_type &>(data);
 }
 
@@ -29,6 +24,9 @@ shared_ptr<jst_node_data> jst_node::jst_node_data_copy(shared_ptr<jst_node_data>
     } else if (type == JST_ARR) {
         auto &node_data = jst_node_data_mem_get<array>(*jnd);
         return std::make_shared<array>(array(node_data));
+    } else if (type == JST_OBJ) {
+        auto &node_data = jst_node_data_mem_get<object>(*jnd);
+        return std::make_shared<object>(object(node_data));
     } else
         return nullptr;
 }
@@ -73,13 +71,13 @@ jst_node &jst_node::operator=(const jst_node &node) {
 }
 
 // move copy construct
-jst_node::jst_node(jst_node &&node) : type(node.type), data(std::move(node.data)) {
+jst_node::jst_node(jst_node &&node) noexcept : type(node.type), data(std::move(node.data)) {
     node.data = nullptr;
     node.type = JST_NULL;
 }
 
 // move assigment construct
-jst_node &jst_node::operator=(jst_node &&node) {
+jst_node &jst_node::operator=(jst_node &&node) noexcept {
     this->type = node.type;
     this->data = std::move(node.data);
     node.data = nullptr;
@@ -133,6 +131,12 @@ void jst_node::jst_node_data_get(array &arr) const {
     assert(type == JST_ARR);
     auto &this_data = jst_node_data_mem_get<array>(*(this->data));
     arr = this_data;
+}
+
+void jst_node::jst_node_data_get(object &obj) const {
+    assert(type == JST_OBJ);
+    auto &this_data = jst_node_data_mem_get<object>(*(this->data));
+    obj = this_data;
 }
 
 size_t jst_node::jst_node_data_length_get() const {
@@ -195,7 +199,7 @@ jst_ret_type jst_node::jst_node_parser_str(const char *str, size_t len) {
     return JST_PARSE_OK;
 }
 
-jst_ret_type jst_node::jst_node_data_set(jst_type t, const char *str, size_t len) {
+jst_ret_type jst_node::jst_node_data_set(jst_type t, const char *str, const size_t len) {
     assert(t != JST_ARR);
     jst_ret_type ret = JST_PARSE_OK;
     type = t;
@@ -210,10 +214,25 @@ jst_ret_type jst_node::jst_node_data_set(jst_type t, const char *str, size_t len
     return ret;
 }
 
+jst_ret_type jst_node::jst_node_data_set(jst_type t, string && s){
+    assert(t == JST_STR);
+    jst_ret_type ret = JST_PARSE_OK;
+    type = t;
+    this->data = std::make_shared<string>(string(s));
+    return ret;
+}
+
 jst_ret_type jst_node::jst_node_data_set(jst_type t, array &&arr) {
     assert(t == JST_ARR);
     type = t;
     this->data = std::make_shared<array>(array(arr));
+    return JST_PARSE_OK;
+}
+
+jst_ret_type jst_node::jst_node_data_set(jst_type t, object &&obj) {
+    assert(t == JST_OBJ);
+    type = t;
+    this->data = std::make_shared<object>(object(obj));
     return JST_PARSE_OK;
 }
 

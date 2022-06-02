@@ -28,10 +28,13 @@ typedef enum {
     JST_PARSE_INVALID_STRING_CHAR,
     JST_PARSE_INVALID_UNICODE_HEX,
     JST_PARSE_INVALID_UNICODE_SURROGATE,
-    JST_PARSE_MISS_COMMA_OR_SQUARE_BRACKET
+    JST_PARSE_MISS_COMMA_OR_SQUARE_BRACKET,
+    JST_PARSE_MISS_KEY,
+    JST_PARSE_MISS_COLON,
+    JST_PARSE_MISS_COMMA_OR_CURLY_BRACKET
 } jst_ret_type;
 
-extern const char *jst_ret_type_name[12];
+extern const char *jst_ret_type_name[15];
 
 typedef enum { JST_WS_BEFORE, JST_WS_AFTER } jst_ws_state;
 } // namespace jst

@@ -27,6 +27,7 @@ jst_context::jst_context(const jst_context &context) : str(context.str), str_ind
     }
     stack = new char[context.size];
     size = context.size;
+    memset(this->stack, 0, this->size);
     top = context.top;
     std::memcpy(stack, context.stack, size);
 }
@@ -37,9 +38,10 @@ jst_context &jst_context::operator=(const jst_context &context) {
     this->str_index = context.str_index;
 
     if (this->stack != nullptr)
-        delete this->stack;
-    this->size = context.size;
+        delete[] this->stack;
     this->stack = new char[context.size];
+    this->size = context.size;
+    memset(this->stack, 0, this->size);
     this->top = context.top;
     std::memcpy(stack, context.stack, size);
     return *this;
@@ -60,9 +62,9 @@ jst_context::jst_context(jst_context &&context) : str(std::move(context.str)), r
 jst_context &jst_context::operator=(jst_context &&context) {
     str = std::move(context.str);
     root = std::move(context.root);
-    if (this->stack != nullptr)
-        delete this->stack;
 
+    if (this->stack != nullptr)
+        delete[] this->stack;
     this->stack = context.stack;
     this->size = context.size;
     this->top = context.top;
@@ -77,8 +79,9 @@ jst_context &jst_context::operator=(jst_context &&context) {
 
 jst_context::~jst_context() {
     assert(top == 0);
-    if (stack != nullptr)
+    if (this->stack != nullptr)
         delete[] stack;
+    this->stack = 0;
     size = 0;
     top = 0;
 }
@@ -89,8 +92,9 @@ void *jst_context::stack_push(size_t p_size) {
         if (size == 0)
             this->size = init_stack_size;
         while (top + p_size >= size)
-            this->size += this->size >> 1;
+            this->size += (this->size >> 1);
         this->stack = (char *)realloc(this->stack, this->size);
+        memset(this->stack, 0, this->size);
     }
     void *ret = this->stack + this->top;
     this->top += p_size;
@@ -110,6 +114,7 @@ jst_ret_type jst_context::jst_parser() {
 jst_ret_type jst_context::jst_ws_parser(jst_ws_state state, jst_type t) {
     int ws_count = 0;
     int index = this->str_index;
+    jst_ret_type ret = JST_PARSE_OK;
     for (int i = index; i < this->str.size(); i++) {
         if (this->str[i] == ' ' || this->str[i] == '\n' || this->str[i] == '\t' || this->str[i] == '\r') {
             ws_count++;
@@ -120,12 +125,18 @@ jst_ret_type jst_context::jst_ws_parser(jst_ws_state state, jst_type t) {
     this->str_index += ws_count;
 
     if (state == JST_WS_BEFORE && this->str_index == this->str.size()) {
-        return JST_PARSE_EXCEPT_VALUE;
+        ret = JST_PARSE_EXCEPT_VALUE;
     } else if (state == JST_WS_AFTER && this->str_index != this->str.size()) {
-        if (this->str[this->str_index] != ',' && this->str[this->str_index] != ']')
-            return JST_PARSE_SINGULAR;
+        if (t == JST_ARR) {
+            if (this->str[this->str_index] != ',' && this->str[this->str_index] != ']')
+                ret = JST_PARSE_MISS_COMMA_OR_SQUARE_BRACKET;
+        } else if (t == JST_OBJ) {
+            if (this->str[this->str_index] != ',' && this->str[this->str_index] != ':' && this->str[this->str_index] != '}')
+                ret = JST_PARSE_MISS_COMMA_OR_CURLY_BRACKET;
+        } else
+            ret = JST_PARSE_SINGULAR;
     }
-    return JST_PARSE_OK;
+    return ret;
 }
 
 jst_ret_type jst_context::jst_val_parser_symbol(jst_node &node) {
@@ -148,13 +159,15 @@ jst_ret_type jst_context::jst_val_parser_symbol(jst_node &node) {
         t = JST_NULL;
         this->str_index += 4;
     }
-    ASSERT_JST_RET(JST_PARSE_OK, jst_ws_parser(JST_WS_AFTER), node);
     node.jst_node_data_set(t);
 
     return JST_PARSE_OK;
 }
 
 jst_ret_type jst_context::jst_val_parser_number(jst_node &node) {
+    assert(std::isdigit(this->str[this->str_index]) || this->str[this->str_index] == '+'
+           || this->str[this->str_index] == '-');
+
     int num_count = 0;
     for (int i = this->str_index; i < str.size(); i++) {
         if (std::isdigit(str[i]) || str[i] == '.' || str[i] == 'e' || str[i] == 'E' || str[i] == '+' || str[i] == '-') {
@@ -165,9 +178,7 @@ jst_ret_type jst_context::jst_val_parser_number(jst_node &node) {
     }
     ASSERT_JST_RET(JST_PARSE_OK, node.jst_node_data_set(JST_NUM, str.substr(this->str_index, num_count).c_str(), num_count),
                    node);
-
     this->str_index += num_count;
-    ASSERT_JST_RET(JST_PARSE_OK, jst_ws_parser(JST_WS_AFTER), node);
 
     return JST_PARSE_OK;
 }
@@ -242,7 +253,7 @@ inline jst_ret_type jst_context::jst_val_parser_str_sp(int &index, std::vector<c
     return ret;
 }
 
-jst_ret_type jst_context::jst_val_parser_string(jst_node &node) {
+jst_ret_type jst_context::jst_val_parser_string_base(string &s) {
     assert(this->str[this->str_index] == '\"');
     jst_ret_type ret = JST_PARSE_OK;
 
@@ -256,22 +267,22 @@ jst_ret_type jst_context::jst_val_parser_string(jst_node &node) {
         case '\"': {
             size_t len = this->top - head;
             char *str_head = (char *)stack_pop(len);
-            ret = node.jst_node_data_set(JST_STR, str_head, len);
+            s = std::move(string(str_head, len));
             index++;
             goto RET;
         }
         case '\0':
             this->top = head;
-            node.jst_node_type_reset();
             ret = JST_PARSE_MISS_QUOTATION_MARK;
             goto RET;
         case '\\': {
-            ASSERT_JST_CONDATION(index + 1 >= cstr_length, node, JST_PARSE_INVALID_VALUE);
+            if ((++index) >= cstr_length) {
+                ret = JST_PARSE_INVALID_VALUE;
+                goto RET;
+            }
             std::vector<char> sp_char;
-            index += 1;
             if (JST_PARSE_OK != (ret = jst_val_parser_str_sp(index, sp_char))) {
                 this->top = head;
-                node.jst_node_type_reset();
                 goto RET;
             }
             for (int i = 0; i < sp_char.size(); i++)
@@ -279,7 +290,10 @@ jst_ret_type jst_context::jst_val_parser_string(jst_node &node) {
             break;
         }
         default: {
-            ASSERT_JST_CONDATION(cstr[index] < 32 || cstr[index] == '"', node, JST_PARSE_INVALID_STRING_CHAR);
+            if (cstr[index] < 32 || cstr[index] == '"') {
+                ret = JST_PARSE_INVALID_STRING_CHAR;
+                goto RET;
+            }
             char &c = *(char *)this->stack_push(sizeof(char));
             c = cstr[index];
             break;
@@ -288,10 +302,18 @@ jst_ret_type jst_context::jst_val_parser_string(jst_node &node) {
         index++;
     }
 RET:
-    if (ret == JST_PARSE_OK) {
+    if (ret == JST_PARSE_OK)
         this->str_index = index;
-        ASSERT_JST_RET(JST_PARSE_OK, jst_ws_parser(JST_WS_AFTER), node);
-    }
+    return ret;
+}
+
+jst_ret_type jst_context::jst_val_parser_string(jst_node &node) {
+    std::unique_ptr<string> s = std::make_unique<string>(string());
+    jst_ret_type ret = jst_val_parser_string_base(*s);
+    if (ret != JST_PARSE_OK)
+        node.jst_node_type_reset();
+    else
+        ret = node.jst_node_data_set(JST_STR, std::move(*s));
     return ret;
 }
 
@@ -303,23 +325,31 @@ jst_ret_type jst_context::jst_val_parser_array(jst_node &node) {
     if (this->str[this->str_index] == ']') {
         node.jst_node_data_set(JST_ARR, array());
         this->str_index++;
-        ASSERT_JST_RET(JST_PARSE_OK, jst_ws_parser(JST_WS_AFTER, JST_ARR), node);
         return ret;
     }
 
     size_t size = 0;
     size_t head = this->top;
-    std::unique_ptr<jst_node> jn(new jst_node);
-    while (this->str_index < this->str.size()) {
-        if ((ret = jst_val_parser(*jn)) != JST_PARSE_OK) {
-            if (ret == JST_PARSE_SINGULAR)
-                ret = JST_PARSE_MISS_COMMA_OR_SQUARE_BRACKET;
-            jn->jst_node_type_reset();
+    std::unique_ptr<jst_node> jn = std::make_unique<jst_node>(jst_node());
+    for(;;) {
+        if(this->str_index == this->str.size()){
+            if(size != 0)
+                ret = JST_PARSE_MISS_COMMA_OR_SQUARE_BRACKET;    
             break;
         }
+        if ((ret = jst_ws_parser(JST_WS_BEFORE)) != JST_PARSE_OK)
+            break;
+
+        ret = jst_val_parser(*jn, true);
+        if (ret != JST_PARSE_OK) {
+            break;
+        }
+
+        if ((ret = jst_ws_parser(JST_WS_AFTER, JST_ARR)) != JST_PARSE_OK)
+            break;
+
         auto stack_node = (jst_node *)this->stack_push(sizeof(jst_node));
-        memset(stack_node, 0, sizeof(jst_node));
-        *stack_node = *jn;
+        *stack_node = std::move(*jn);
         size++;
         jn->jst_node_type_reset();
 
@@ -332,15 +362,14 @@ jst_ret_type jst_context::jst_val_parser_array(jst_node &node) {
             for (int i = 0; i < size; i++)
                 (*arr)[i] = std::move(arr_head[i]);
             node.jst_node_data_set(JST_ARR, std::move(*arr));
+            size = 0;
             break;
         } else {
             ret = JST_PARSE_MISS_COMMA_OR_SQUARE_BRACKET;
             break;
         }
     }
-    if (ret == JST_PARSE_OK) {
-        ASSERT_JST_RET(JST_PARSE_OK, jst_ws_parser(JST_WS_AFTER, JST_ARR), node);
-    } else {
+    if (ret != JST_PARSE_OK) {
         if (size != 0) {
             jst_node *arr_head = (jst_node *)this->stack_pop(size * sizeof(jst_node));
             for (int i = 0; i < size; i++)
@@ -348,25 +377,127 @@ jst_ret_type jst_context::jst_val_parser_array(jst_node &node) {
         }
         this->top = head;
         node.jst_node_type_reset();
+    } else
+        ASSERT_JST_RET(JST_PARSE_OK, jst_ws_parser(JST_WS_AFTER, JST_ARR), node);
+    return ret;
+}
+
+jst_ret_type jst_context::jst_val_parser_object_member(object_member &objm) {
+    jst_ret_type ret = JST_PARSE_OK;
+
+    if (this->str[this->str_index] != '\"')
+        return JST_PARSE_MISS_KEY;
+    std::unique_ptr<string> s = std::make_unique<string>(string());
+    ret = jst_val_parser_string_base(*s);
+    if (ret != JST_PARSE_OK)
+        return ret;
+
+    if ((ret = jst_ws_parser(JST_WS_AFTER, JST_OBJ)) != JST_PARSE_OK)
+        return ret;
+
+    if (this->str[this->str_index++] != ':') {
+        ret = JST_PARSE_MISS_COLON;
+        return ret;
+    }
+
+    if ((ret = jst_ws_parser(JST_WS_BEFORE, JST_OBJ)) != JST_PARSE_OK)
+        return ret;
+
+    std::unique_ptr<jst_node> jn = std::make_unique<jst_node>(jst_node());
+    if ((ret = jst_val_parser(*jn, true)) != JST_PARSE_OK)
+        return ret;
+
+    objm = std::move(object_member(std::move(*s), std::move(std::make_shared<jst_node>(std::move(*jn)))));
+
+    return ret;
+}
+
+jst_ret_type jst_context::jst_val_parser_object(jst_node &node) {
+    assert(this->str[this->str_index++] == '{');
+    ASSERT_JST_RET(JST_PARSE_OK, jst_ws_parser(JST_WS_BEFORE), node);
+
+    jst_ret_type ret = JST_PARSE_OK;
+    if (this->str[this->str_index] == '}') {
+        node.jst_node_data_set(JST_OBJ, object());
+        this->str_index++;
+        return ret;
+    }
+
+    size_t size = 0;
+    int head = this->top;
+    std::unique_ptr<object_member> objm = std::make_unique<object_member>(object_member());
+    for(;;) {
+        if(this->str_index == this->str.size()){
+            if(size != 0)
+                ret = JST_PARSE_MISS_KEY;    
+            break;
+        }
+        if ((ret = jst_ws_parser(JST_WS_BEFORE)) != JST_PARSE_OK)
+            break;
+
+        if ((ret = jst_val_parser_object_member(*objm)) != JST_PARSE_OK)
+            break;
+
+        if ((ret = jst_ws_parser(JST_WS_AFTER, JST_OBJ)) != JST_PARSE_OK)
+            break;
+
+        auto stack_node = (object_member *)this->stack_push(sizeof(object_member));
+        *stack_node = std::move(*objm);
+        size++;
+
+        if (this->str[this->str_index] == ',') {
+            this->str_index++;
+        } else if (this->str[this->str_index] == '}') {
+            this->str_index++;
+            std::unique_ptr<object> obj(new object(size));
+            object_member *objm_head = (object_member *)this->stack_pop(size * sizeof(object_member));
+
+            for (int i = 0; i < size; i++)
+                (*obj)[i] = std::move(objm_head[i]);
+            node.jst_node_data_set(JST_OBJ, std::move(*obj));
+            break;
+        } else {
+            ret = JST_PARSE_MISS_COMMA_OR_CURLY_BRACKET;
+            break;
+        }
+    }
+
+    if (ret == JST_PARSE_OK) {
+        ASSERT_JST_RET(JST_PARSE_OK, jst_ws_parser(JST_WS_AFTER, JST_OBJ), node);
+    } else {
+        if (size != 0) {
+            object_member *objm_head = (object_member *)this->stack_pop(size * sizeof(object_member));
+            for (int i = 0; i < size; i++)
+                std::unique_ptr<object_member> objm = std::make_unique<object_member>(std::move(objm_head[i]));
+        }
+        this->top = head;
+        node.jst_node_type_reset();
     }
     return ret;
 }
 
-jst_ret_type jst_context::jst_val_parser(jst_node &node) {
-    ASSERT_JST_RET(JST_PARSE_OK, jst_ws_parser(JST_WS_BEFORE), root);
+jst_ret_type jst_context::jst_val_parser(jst_node &node, bool is_local) {
+    if (!is_local)
+        ASSERT_JST_RET(JST_PARSE_OK, jst_ws_parser(JST_WS_BEFORE), root);
+
+    jst_ret_type ret = JST_PARSE_OK;
     switch (str[this->str_index]) {
-    case 'n': return jst_val_parser_symbol(node);
-    case 't': return jst_val_parser_symbol(node);
-    case 'f': return jst_val_parser_symbol(node);
-    case '\"': return jst_val_parser_string(node);
-    case '[': return jst_val_parser_array(node);
-    case '{': return JST_PARSE_OK;
-    case '0' ... '9': return jst_val_parser_number(node);
-    case '+': return jst_val_parser_number(node);
-    case '-': return jst_val_parser_number(node);
-    default: return JST_PARSE_INVALID_VALUE;
+    case 'n': ret = jst_val_parser_symbol(node); break;
+    case 't': ret = jst_val_parser_symbol(node); break;
+    case 'f': ret = jst_val_parser_symbol(node); break;
+    case '\"': ret = jst_val_parser_string(node); break;
+    case '[': ret = jst_val_parser_array(node); break;
+    case '{': ret = jst_val_parser_object(node); break;
+    case '0' ... '9': ret = jst_val_parser_number(node); break;
+    case '+': ret = jst_val_parser_number(node); break;
+    case '-': ret = jst_val_parser_number(node); break;
+    default: ret = JST_PARSE_INVALID_VALUE;
     }
-    return JST_PARSE_OK;
+
+    if (!is_local && ret == JST_PARSE_OK)
+        ASSERT_JST_RET(JST_PARSE_OK, jst_ws_parser(JST_WS_AFTER, node.jst_node_type_get()), node);
+
+    return ret;
 }
 
 } // namespace jst
