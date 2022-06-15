@@ -1,202 +1,195 @@
 #ifndef __JSON_TOY_BASIC_H__
 #define __JSON_TOY_BASIC_H__
 
-#include <string>
-#include <memory>
 #include <assert.h>
+
+#include "json_toy_enum.h"
+#include "jst_vector.h"
+#include <algorithm>
+#include <memory>
+#include <string>
 
 namespace jst {
 
-#define ASSERT_VECTOR_NO_RET(vec, head, length)                                                                             \
-    if (vec.is_empty()) {                                                                                                   \
-        this->head = nullptr;                                                                                               \
-        this->length = 0;                                                                                                   \
-        return;                                                                                                             \
-    }
-
-#define ASSERT_VECTOR_HAS_RET(vec, head, length, ret)                                                                       \
-    if (vec.is_empty()) {                                                                                                   \
-        this->head = nullptr;                                                                                               \
-        this->length = 0;                                                                                                   \
-        return ret;                                                                                                         \
-    }
-
 class jst_node;
 using std::shared_ptr;
+using jst::utils::jst_vector;
 
-struct jst_num_exp {
+struct jst_num_exp
+{
     bool is_have;
-    int exp_index;
-    jst_num_exp() : is_have(false), exp_index(0) {
-    }
+    int  exp_index;
+    jst_num_exp()
+        : is_have(false)
+        , exp_index(0)
+    {}
 };
 
-struct jst_num_point {
+struct jst_num_point
+{
     bool is_have;
-    int point_index;
-    jst_num_point() : is_have(false), point_index(0) {
-    }
+    int  point_index;
+    jst_num_point()
+        : is_have(false)
+        , point_index(0)
+    {}
 };
 
-class jst_node_data {
+class jst_node_data
+{
 public:
-    jst_node_data() {
-    }
+    jst_node_data() {}
     virtual ~jst_node_data(){};
 };
 
-class string : public jst_node_data {
-public:
-    string() : s(nullptr), length(0) {
-    }
-    string(const char *s, size_t len = 0);
-
-    string(const string &s);
-    string &operator=(const string &s);
-    string(string &&s) noexcept;
-    string &operator=(string &&s) noexcept;
-    ~string();
-
-    size_t size() const {
-        return length;
-    };
-    void get_c_str(char **str, size_t &len) const {
-        *str = s;
-        len = length;
-    }
-    bool is_empty() const {
-        return s == nullptr || length == 0;
-    }
-
+class string : virtual public jst_node_data
+{
 private:
     size_t length;
-    char *s;
+    char*  s;
+
+public:
+    explicit string()
+        : s(nullptr)
+        , length(0)
+    {}
+    explicit string(const char* s, size_t len = 0);
+
+    string(const string& s);
+    string& operator=(const string& s);
+    string(string&& s) noexcept;
+    string& operator=(string&& s) noexcept;
+    ~string();
+
+public:
+    size_t size() const;
+    char*  c_str() const;
+    bool   empty() const;
+
+public:
+    friend bool operator==(const string& str_1, const string& str_2);
 };
 
-class number : public jst_node_data {
+class number : public jst_node_data
+{
 public:
-    number() : num(0.0) {
-    }
-    explicit number(double n) : num(n){};
+    number()
+        : num(0.0)
+    {}
+    friend bool operator==(const number& num_1, const number& num_2);
+    explicit number(double n)
+        : num(n){};
     double num;
 };
 
-class array : public jst_node_data {
+class array : public jst_node_data
+{
+private:
+    jst_node* a_;
+    size_t    len_;
+    size_t    cap_;
+
 public:
-    array() : a(nullptr), length(0) {
-    }
-    array(size_t length);
-    array(const array &arr);
-    array &operator=(const array &arr);
-    array(array &&arr) noexcept;
-    array &operator=(array &&arr) noexcept;
-    jst_node &operator[](int index);
+    array();
+    explicit array(size_t len);
+    array(const array& arr);
+    array(array&& arr) noexcept;
+    array& operator=(const array& arr);
+    array& operator=(array&& arr) noexcept;
     ~array();
 
-    size_t size() const {
-        return length;
-    };
-    bool is_empty() const {
-        return a == nullptr || length == 0;
-    }
-    const jst_node *get_array_head() const {
-        return this->a;
-    };
-    void set_array(jst_node *arr, int length);
-    void push(jst_node &node);
+public:
+    jst_node&       operator[](int index);
+    const jst_node& operator[](int index) const;
 
-private:
-    jst_node *a;
-    size_t length;
+    size_t find(const jst_node& jn) const;
+    size_t size() const;
+    size_t capacity() const;
+    bool   empty() const;
+
+    const jst_node* data() const;
+    jst_node*       data();
+
+public:
+    size_t insert(size_t pos, jst_node& jn);
+    size_t erase(size_t pos, size_t count = 1);
+    void   push_back(const jst_node& jn);
+    void   pop_back();
+    void   clear();
+    void   reserve(size_t new_cap);
+    void   shrink_to_fit();
+
+public:
+    friend bool operator==(const array& arr_1, const array& arr_2);
 };
 
 // object
-class object_member {
-public:
-    object_member() : key(), value() {
-    }
-    object_member(string &key, shared_ptr<jst_node> value) : key(key), value(value) {
-    }
-    object_member(string &&key, shared_ptr<jst_node> &&value) noexcept : key(std::move(key)), value(std::move(value)) {
-    }
-    object_member(const object_member &om) : key(om.key), value(om.value) {
-    }
-    object_member &operator=(const object_member &om) {
-        key = om.key;
-        value = om.value;
-        return *this;
-    };
-    object_member(object_member &&om) noexcept : key(std::move(om.key)), value(std::move(om.value)) {
-    }
-    object_member &operator=(const object_member &&om) noexcept {
-        key = std::move(om.key);
-        value = std::move(om.value);
-        return *this;
-    }
-    ~object_member() {
-        value = nullptr;
-    }
-
-    void set_key(const string &s) {
-        key = s;
-    }
-    void set_key(string &&s) {
-        key = std::move(s);
-    }
-    void set_value(const jst_node &v) {
-        value = std::make_unique<jst_node>(v);
-    }
-    void set_value(jst_node &&v) {
-        value = std::make_unique<jst_node>(v);
-    }
-
-    const string &get_key() const {
-        return key;
-    }
-    const jst_node &get_value() const {
-        return *value;
-    }
-
+class object_member
+{
 private:
-    string key;
-    shared_ptr<jst_node> value;
+    string*   key;
+    jst_node* value;
+
+public:
+    object_member()
+        : key()
+        , value()
+    {}
+    object_member(const string& key, const jst_node& value);
+    object_member(string&& key, jst_node&& value);
+
+    object_member(const object_member& om);
+    object_member& operator=(const object_member& om);
+    object_member(object_member&& om) noexcept;
+    object_member& operator=(object_member&& om) noexcept;
+    ~object_member();
+
+public:
+    const string&   get_key() const { return *key; }
+    const jst_node& get_value() const { return *value; }
+
+public:
+    friend bool operator==(const object_member objm_1, const object_member objm_2);
+    friend bool operator!=(const object_member objm_1, const object_member objm_2);
 };
 
-class object : public jst_node_data {
-public:
-    object() : obj_m(nullptr), length(0) {
-    }
-    object(size_t length);
+class object : public jst_node_data
+{
+private:
+    object_member* obj_;
+    size_t len_;
+    size_t cap_;
 
-    object(const object &o);
-    object &operator=(const object &o);
-    object(object &&o) noexcept;
-    object &operator=(object &&o) noexcept;
+public:
+    object();
+    explicit object(size_t length);
+    object(const object& o);
+    object& operator=(const object& o);
+    object(object&& o) noexcept;
+    object& operator=(object&& o) noexcept;
     ~object();
 
-    object_member &operator[](int index);
+public:
+    const object_member& operator[](int index) const;
+    object_member&       operator[](int index);
 
-    bool is_empty() const {
-        return obj_m == nullptr && length == 0;
-    }
+    size_t          find_index(const string& key);
+    const jst_node* find_value(const string& key);
+    bool   empty() const;
+    size_t size() const;
+    size_t capacity() const;
 
-    size_t get_object_size() const {
-        return length;
-    };
-    const string &get_object_key(size_t index) const {
-        assert(index >= 0 && index < this->length);
-        return obj_m[index].get_key();
-    };
-    const jst_node &get_object_value(size_t index) const {
-        assert(index >= 0 && index < this->length);
-        return obj_m[index].get_value();
-    };
+    const object_member* data() const;
+    object_member*       data();
 
-private:
-    object_member *obj_m;
-    size_t length;
+    const string&   get_key(size_t index) const;
+    const jst_node& get_value(size_t index) const;
+
+public:
+    friend bool operator==(object& obj_1, object& obj_2);
+    friend bool operator!=(object& objm_1, object& objm_2);
 };
 
-} // namespace jst
+}   // namespace jst
 
-#endif //__JSON_TOY_BASIC_H__
+#endif   //__JSON_TOY_BASIC_H__

@@ -1,17 +1,20 @@
 #include "json_toy_basic.h"
 #include "json_toy_node.h"
-#include <cctype>
-#include <cstring>
 #include <assert.h>
+#include <cctype>
+#include <cmath>
+#include <cstring>
+#include <limits>
 
 namespace jst {
-
 /*
 string class implemention;
 */
-string::string(const char *str, size_t len) : length(len) {
+string::string(const char* str, size_t len)
+    : length(len)
+{
     if (str == nullptr) {
-        this->s = nullptr;
+        this->s      = nullptr;
         this->length = 0;
         return;
     }
@@ -22,174 +25,579 @@ string::string(const char *str, size_t len) : length(len) {
     this->s[this->length] = '\0';
 }
 
-string::string(const string &str) : length(str.length) {
+string::string(const string& str)
+    : length(str.length)
+{
     ASSERT_VECTOR_NO_RET(str, s, length);
     this->s = new char[this->length + 1];
     memcpy(this->s, str.s, this->length * sizeof(char));
     this->s[this->length] = '\0';
 }
 
-string &string::operator=(const string &str) {
+string& string::operator=(const string& str)
+{
     if (this->s != nullptr)
         delete[] this->s;
 
     ASSERT_VECTOR_HAS_RET(str, s, length, *this);
     this->length = str.length;
-    this->s = new char[this->length + 1];
+    this->s      = new char[this->length + 1];
     memcpy(this->s, str.s, this->length * sizeof(char));
     this->s[this->length] = '\0';
     return *this;
 }
 
-string::string(string &&str) noexcept : s(str.s), length(str.length) {
+string::string(string&& str) noexcept
+    : s(str.s)
+    , length(str.length)
+{
     ASSERT_VECTOR_NO_RET(str, s, length);
-    str.s = nullptr;
+    str.s      = nullptr;
     str.length = 0;
     return;
 }
 
-string &string::operator=(string &&str) noexcept {
+string& string::operator=(string&& str) noexcept
+{
     if (this->s != nullptr)
         delete[] this->s;
     ASSERT_VECTOR_HAS_RET(str, s, length, *this);
-    this->s = str.s;
+    this->s      = str.s;
     this->length = str.length;
-    str.s = nullptr;
-    str.length = 0;
+    str.s        = nullptr;
+    str.length   = 0;
     return *this;
 }
 
-string::~string() {
+string::~string()
+{
     if (this->s != nullptr)
         delete[] this->s;
     this->length = 0;
+    this->s      = nullptr;
+}
+
+size_t string::size() const
+{
+    return length;
+};
+
+char* string::c_str() const
+{
+    return s;
+}
+
+bool string::empty() const
+{
+    return s == nullptr || length == 0;
+}
+
+bool operator==(const number& num_1, const number& num_2)
+{
+    return std::fabs((num_1.num) - (num_2.num)) < std::numeric_limits<double>::epsilon();
 }
 
 /*
 array class implemention;
 */
-array::array(size_t length) : length(length) {
-    this->a = new jst_node[this->length];
-    for (int i = 0; i < this->length; i++)
-        this->a[i] = jst_node();
+
+array::array()
+    : a_(nullptr)
+    , len_(0)
+    , cap_(0)
+{}
+
+// The expansion threshold is the nearest 2 to the NTH power of the input
+// capacity.
+inline int tableSizeFor(int cap)
+{
+    // In case it's a power of two
+    int n = cap - 1;
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+    return (n < 0) ? 1 : n + 1;
 }
 
-array::array(const array &arr) : a(arr.a), length(arr.length) {
-    ASSERT_VECTOR_NO_RET(arr, a, length);
-    this->length = arr.length;
-    this->a = new jst_node[this->length];
-    for (int i = 0; i < this->length; i++)
-        this->a[i] = arr.a[i];
+array::array(size_t len)
+{
+    this->cap_ = tableSizeFor(len);
+    this->a_   = new jst_node[this->cap_];
+    this->len_ = len;
 }
 
-array &array::operator=(const array &arr) {
-    if (this->a != nullptr)
-        delete[] this->a;
-    ASSERT_VECTOR_HAS_RET(arr, a, length, *this);
-    this->length = arr.length;
-    this->a = new jst_node[this->length];
-    for (int i = 0; i < this->length; i++)
-        this->a[i] = arr.a[i];
+array::array(const array& arr)
+{
+    ASSERT_VECTOR_NO_RET(arr, a_, len_);
+    this->cap_ = arr.cap_;
+    this->len_ = arr.len_;
+    this->a_   = new jst_node[this->cap_];
+    for (int i = 0; i < this->len_; i++)
+        this->a_[i] = arr.a_[i];
+}
+
+array::array(array&& arr) noexcept
+    : a_(arr.a_)
+    , len_(arr.len_)
+    , cap_(arr.cap_)
+{
+    arr.a_   = nullptr;
+    arr.len_ = 0;
+    arr.cap_ = 0;
+}
+
+array& array::operator=(const array& arr)
+{
+    if (this != &arr) {
+        if (this->a_ != nullptr)
+            delete[] this->a_;
+        ASSERT_VECTOR_HAS_RET(arr, a_, len_, *this);
+        this->cap_ = arr.cap_;
+        this->len_ = arr.len_;
+        this->a_   = new jst_node[this->cap_];
+        for (int i = 0; i < this->len_; i++)
+            this->a_[i] = arr.a_[i];
+    }
     return *this;
 }
 
-array::array(array &&arr) noexcept : a(arr.a), length(arr.length) {
-    arr.a = nullptr;
-    arr.length = 0;
-}
-
-array &array::operator=(array &&arr) noexcept {
-    if (this->a != nullptr)
-        delete[] this->a;
-    ASSERT_VECTOR_HAS_RET(arr, a, length, *this);
-    this->a = arr.a;
-    this->length = arr.length;
-    arr.a = nullptr;
-    arr.length = 0;
+array& array::operator=(array&& arr) noexcept
+{
+    if (this->a_ != nullptr)
+        delete[] this->a_;
+    ASSERT_VECTOR_HAS_RET(arr, a_, len_, *this);
+    this->a_   = arr.a_;
+    this->cap_ = arr.cap_;
+    this->len_ = arr.len_;
+    arr.a_     = nullptr;
+    arr.len_   = 0;
+    arr.cap_   = 0;
     return *this;
 }
 
-array::~array() {
-    if (this->a != nullptr)
-        delete[] this->a;
-    this->a = nullptr;
-    this->length = 0;
+array::~array()
+{
+    if (this->a_ != nullptr)
+        delete[] this->a_;
+    this->a_   = nullptr;
+    this->len_ = 0;
+    this->cap_ = 0;
 }
 
-jst_node &array::operator[](int index) {
-    assert(index >= 0 && index < length);
-    return this->a[index];
+jst_node& array::operator[](int index)
+{
+    JST_DEBUG(index >= 0 && index < len_);
+    return this->a_[index];
+}
+
+const jst_node& array::operator[](int index) const
+{
+    JST_DEBUG(index >= 0 && index < len_);
+    return this->a_[index];
+}
+
+size_t array::size() const
+{
+    return len_;
+};
+bool array::empty() const
+{
+    return len_ == 0;
+}
+
+size_t array::capacity() const
+{
+    return this->cap_;
+}
+
+const jst_node* array::data() const
+{
+    return this->a_;
+};
+
+jst_node* array::data()
+{
+    return this->a_;
+};
+
+#define JST_NODE_NOT_EXIST ((size_t)-1)
+
+bool operator==(const array& arr_1, const array& arr_2)
+{
+    if (arr_1.len_ != arr_2.len_)
+        return false;
+    size_t size = arr_1.size();
+    for (int i = 0; i < size; i++) {
+        if (arr_1.find(arr_2[i]) == JST_NODE_NOT_EXIST)
+            return false;
+    }
+    return true;
+}
+
+size_t array::find(const jst_node& jn) const
+{
+    size_t size = this->size();
+    for (size_t i = 0; i < size; i++) {
+        if (jn == a_[i])
+            return i;
+    }
+    return JST_NODE_NOT_EXIST;
+}
+
+size_t array::insert(size_t pos, jst_node& jn)
+{
+    JST_DEBUG(pos <= size());
+    if (this->cap_ == 0) {
+        this->cap_ = 2;
+        this->a_   = new jst_node[this->cap_];
+    }
+    if (this->len_ + 1 > this->cap_) {
+        this->cap_ += (this->cap_ >> 1);
+        jst_node* tmp = this->a_;
+        this->a_      = new jst_node[this->cap_];
+        for (size_t i = 0; i < pos; i++)
+            this->a_[i] = std::move(tmp[i]);
+        this->a_[pos] = jn;
+        for (size_t i = pos + 1; i < this->len_ + 1; i++)
+            this->a_[i] = tmp[i - 1];
+        delete[] tmp;
+    }
+    else {
+        for (size_t i = this->len_; i > pos; i--)
+            this->a_[i] = std::move(this->a_[i - 1]);
+        this->a_[pos] = jn;
+    }
+    this->len_ += 1;
+    return pos;
+}
+
+size_t array::erase(size_t pos, size_t count)
+{
+    JST_DEBUG(pos >= 0 && pos < this->len_);
+    if (count == 0)
+        return pos;
+    count = std::min(count, this->len_ - pos);
+    for (size_t i = 0; i < count; i++)
+        this->a_[pos + i].jst_node_type_reset();
+    for (size_t i = pos; i + count < this->len_; i++)
+        this->a_[i] = std::move(this->a_[i + count]);
+    this->len_ -= count;
+    return pos;
+}
+
+void array::push_back(const jst_node& jn)
+{
+    if (this->cap_ == 0) {
+        this->cap_ = 2;
+        this->a_   = new jst_node[this->cap_];
+    }
+    if (this->len_ + 1 > this->cap_) {
+        this->cap_    = this->cap_ == 1 ? 2 : this->cap_ + (this->cap_ >> 1);
+        jst_node* tmp = this->a_;
+        this->a_      = new jst_node[this->cap_];
+        for (size_t i = 0; i < this->len_; i++)
+            this->a_[i] = std::move(tmp[i]);
+        delete[] tmp;
+    }
+    this->a_[this->len_++] = jn;
+}
+
+void array::pop_back()
+{
+    if (this->len_ == 0)
+        return;
+    this->a_[this->len_ - 1].jst_node_type_reset();
+    this->len_ -= 1;
+}
+
+void array::clear()
+{
+    for (size_t i = 0; i < this->len_; i++)
+        this->a_[i].jst_node_type_reset();
+    this->len_ = 0;
+}
+
+void array::reserve(size_t new_cap)
+{
+    if (new_cap <= this->cap_)
+        return;
+    this->cap_ = tableSizeFor(new_cap);
+    if (this->len_ > 0) {
+        jst_node* tmp = this->a_;
+        this->a_      = new jst_node[this->cap_];
+        for (size_t i = 0; i < this->len_; i++)
+            this->a_[i] = std::move(tmp[i]);
+        delete[] tmp;
+    }
+    else
+        this->a_ = new jst_node[this->cap_];
+}
+
+void array::shrink_to_fit()
+{
+    if (cap_ == len_)
+        return;
+    jst_node* tmp = this->a_;
+    this->cap_    = this->len_;
+    this->a_      = new jst_node[this->len_];
+    for (size_t i = 0; i < len_; i++)
+        this->a_[i] = std::move(tmp[i]);
+    delete[] tmp;
+}
+
+/*
+object member implementation.
+*/
+object_member::object_member(const string& key, const jst_node& value)
+{
+    this->key   = new string(key);
+    this->value = new jst_node(value);
+}
+
+object_member::object_member(string&& key, jst_node&& value)
+{
+    this->key   = new string(std::move(key));
+    this->value = new jst_node(std::move(value));
+}
+
+object_member::object_member(const object_member& om)
+{
+    this->key   = new string(*om.key);
+    this->value = new jst_node(*om.value);
+}
+
+object_member& object_member::operator=(const object_member& om)
+{
+    if (this != &om) {
+        if (this->key != nullptr)
+            delete this->key;
+        if (this->value != nullptr)
+            delete this->value;
+        this->key   = new string(*om.key);
+        this->value = new jst_node(*om.value);
+    }
+    return *this;
+}
+
+object_member::object_member(object_member&& om) noexcept
+    : key(om.key)
+    , value(om.value)
+{
+    om.value = nullptr;
+    om.key   = nullptr;
+}
+
+object_member& object_member::operator=(object_member&& om) noexcept
+{
+    if (this->key != nullptr)
+        delete this->key;
+    if (this->value != nullptr)
+        delete this->value;
+    this->key   = om.key;
+    this->value = om.value;
+    om.value    = nullptr;
+    om.key      = nullptr;
+    return *this;
+}
+object_member::~object_member()
+{
+    if (this->value != nullptr)
+        delete this->value;
+    this->value = nullptr;
+    if (this->key != nullptr)
+        delete this->key;
+    this->key = nullptr;
+}
+
+bool operator==(object_member objm_1, object_member objm_2)
+{
+    return (objm_1.get_key() == objm_2.get_key()) && (objm_1.get_value() == objm_2.get_value());
+}
+
+bool operator!=(const object_member objm_1, const object_member objm_2)
+{
+    return !(objm_1 == objm_2);
 }
 
 /*
 object class implemention;
 */
-object::object(size_t len) : obj_m(nullptr), length(0) {
+object::object()
+    : obj_(nullptr)
+    , len_(0)
+    , cap_(0)
+{}
+
+object::object(size_t len)
+    : obj_(nullptr)
+    , len_(0)
+{
     if (len == 0)
         return;
-    this->length = len;
-    this->obj_m = new object_member[this->length];
-    for (int i = 0; i < this->length; i++)
-        this->obj_m[i] = object_member();
+    this->len_ = len;
+    this->obj_ = new object_member[this->len_];
+    for (int i = 0; i < this->len_; i++)
+        this->obj_[i] = object_member();
 }
 
-object::object(const object &o) : length(o.length) {
-    if (o.is_empty()) {
-        this->obj_m = nullptr;
-        this->length = 0;
+object::object(const object& o)
+    : len_(o.len_)
+{
+    if (o.empty()) {
+        this->obj_ = nullptr;
+        this->len_ = 0;
         return;
     }
-    this->length = o.length;
-    this->obj_m = new object_member[this->length];
-    for (int i = 0; i < this->length; i++)
-        this->obj_m[i] = o.obj_m[i];
+    this->len_ = o.len_;
+    this->obj_ = new object_member[this->len_];
+    for (int i = 0; i < this->len_; i++)
+        this->obj_[i] = o.obj_[i];
 }
 
-object &object::operator=(const object &o) {
-    if (this->obj_m == nullptr)
-        delete[] this->obj_m;
-    if (o.is_empty()) {
-        this->obj_m = nullptr;
-        this->length = 0;
+object& object::operator=(const object& o)
+{
+    if (this->obj_ != nullptr)
+        delete[] this->obj_;
+    if (o.empty()) {
+        this->obj_ = nullptr;
+        this->len_ = 0;
         return *this;
     }
-    this->length = o.length;
-    this->obj_m = new object_member[this->length];
-    for (int i = 0; i < this->length; i++)
-        this->obj_m[i] = o.obj_m[i];
+    this->len_ = o.len_;
+    this->obj_ = new object_member[this->len_];
+    for (int i = 0; i < this->len_; i++)
+        this->obj_[i] = o.obj_[i];
     return *this;
 }
 
-object::object(object &&o) noexcept : obj_m(o.obj_m), length(o.length) {
-    o.obj_m = nullptr;
-    o.length = 0;
+object::object(object&& o) noexcept
+    : obj_(o.obj_)
+    , len_(o.len_)
+{
+    o.obj_ = nullptr;
+    o.len_ = 0;
 }
 
-object &object::operator=(object &&o) noexcept {
-    if (this->obj_m != nullptr)
-        delete[] this->obj_m;
-    if (o.is_empty()) {
-        this->obj_m = nullptr;
-        this->length = 0;
+object& object::operator=(object&& o) noexcept
+{
+    if (this->obj_ != nullptr)
+        delete[] this->obj_;
+    if (o.empty()) {
+        this->obj_ = nullptr;
+        this->len_ = 0;
         return *this;
     }
-    this->obj_m = o.obj_m;
-    this->length = o.length;
-    o.obj_m = nullptr;
-    o.length = 0;
+    this->obj_ = o.obj_;
+    this->len_ = o.len_;
+    o.obj_     = nullptr;
+    o.len_     = 0;
     return *this;
 }
 
-object::~object() {
-    if (this->obj_m != nullptr)
-        delete[] this->obj_m;
-    this->obj_m = nullptr;
-    this->length = 0;
+object::~object()
+{
+    if (this->obj_ != nullptr)
+        delete[] this->obj_;
+    this->obj_ = nullptr;
+    this->len_ = 0;
 }
 
-object_member &object::operator[](int index) {
-    assert(index >= 0 && index < length);
-    return this->obj_m[index];
+const object_member& object::operator[](int index) const
+{
+    JST_DEBUG(index < size());
+    return this->obj_[index];
 }
 
-} // namespace jst
+object_member& object::operator[](int index)
+{
+    JST_DEBUG(index < size());
+    return this->obj_[index];
+}
+
+bool object::empty() const
+{
+    return len_ == 0;
+}
+
+size_t object::size() const
+{
+    return len_;
+}
+
+size_t object::capacity() const
+{
+    return cap_;
+}
+
+const object_member* object::data() const
+{
+    return this->obj_;
+}
+
+object_member* object::data()
+{
+    return this->obj_;
+}
+
+const string& object::get_key(size_t index) const
+{
+    JST_DEBUG(index >= 0 && index < this->len_);
+    return obj_[index].get_key();
+}
+
+const jst_node& object::get_value(size_t index) const
+{
+    JST_DEBUG(index >= 0 && index < this->len_);
+    return obj_[index].get_value();
+}
+
+bool operator==(const string& str_1, const string& str_2)
+{
+    return (str_1.length == str_2.length) &&
+           memcmp(str_1.c_str(), str_2.c_str(), str_1.size()) == 0;
+}
+
+#define JST_KEY_NOT_EXIST ((size_t)-1)
+
+size_t object::find_index(const string& ky)
+{
+    size_t size = this->size();
+    for (size_t i = 0; i < size; i++) {
+        if (ky == obj_[i].get_key())
+            return i;
+    }
+    return JST_KEY_NOT_EXIST;
+}
+
+const jst_node* object::find_value(const string& ky)
+{
+    size_t size = this->size();
+    size_t i    = JST_KEY_NOT_EXIST;
+    for (; i < size; i++) {
+        if (ky == obj_[i].get_key())
+            break;
+    }
+    return i != JST_KEY_NOT_EXIST ? &obj_[i].get_value() : nullptr;
+}
+
+bool operator==(object& obj_1, object& obj_2)
+{
+    if (obj_1.len_ != obj_2.len_)
+        return false;
+    size_t size = obj_1.size();
+    for (int i = 0; i < size; i++) {
+        size_t index;
+        if ((index = obj_1.find_index(obj_2[i].get_key())) == JST_KEY_NOT_EXIST || obj_1[index] != obj_2[i])
+            return false;
+    }
+    return true;
+}
+
+bool operator!=(object& objm_1, object& objm_2)
+{
+    return !(objm_1 == objm_2);
+}
+
+}   // namespace jst
