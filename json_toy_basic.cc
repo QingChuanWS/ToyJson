@@ -92,6 +92,13 @@ bool string::empty() const
     return s == nullptr || length == 0;
 }
 
+
+bool operator==(const string& str_1, const string& str_2)
+{
+    return (str_1.length == str_2.length) &&
+           memcmp(str_1.c_str(), str_2.c_str(), str_1.size()) == 0;
+}
+
 bool operator==(const number& num_1, const number& num_2)
 {
     return std::fabs((num_1.num) - (num_2.num)) < std::numeric_limits<double>::epsilon();
@@ -424,140 +431,6 @@ bool operator!=(const object_member objm_1, const object_member objm_2)
 /*
 object class implemention;
 */
-object::object()
-    : obj_(nullptr)
-    , len_(0)
-    , cap_(0)
-{}
-
-object::object(size_t len)
-    : obj_(nullptr)
-    , len_(0)
-{
-    if (len == 0)
-        return;
-    this->len_ = len;
-    this->obj_ = new object_member[this->len_];
-    for (int i = 0; i < this->len_; i++)
-        this->obj_[i] = object_member();
-}
-
-object::object(const object& o)
-    : len_(o.len_)
-{
-    if (o.empty()) {
-        this->obj_ = nullptr;
-        this->len_ = 0;
-        return;
-    }
-    this->len_ = o.len_;
-    this->obj_ = new object_member[this->len_];
-    for (int i = 0; i < this->len_; i++)
-        this->obj_[i] = o.obj_[i];
-}
-
-object& object::operator=(const object& o)
-{
-    if (this->obj_ != nullptr)
-        delete[] this->obj_;
-    if (o.empty()) {
-        this->obj_ = nullptr;
-        this->len_ = 0;
-        return *this;
-    }
-    this->len_ = o.len_;
-    this->obj_ = new object_member[this->len_];
-    for (int i = 0; i < this->len_; i++)
-        this->obj_[i] = o.obj_[i];
-    return *this;
-}
-
-object::object(object&& o) noexcept
-    : obj_(o.obj_)
-    , len_(o.len_)
-{
-    o.obj_ = nullptr;
-    o.len_ = 0;
-}
-
-object& object::operator=(object&& o) noexcept
-{
-    if (this->obj_ != nullptr)
-        delete[] this->obj_;
-    if (o.empty()) {
-        this->obj_ = nullptr;
-        this->len_ = 0;
-        return *this;
-    }
-    this->obj_ = o.obj_;
-    this->len_ = o.len_;
-    o.obj_     = nullptr;
-    o.len_     = 0;
-    return *this;
-}
-
-object::~object()
-{
-    if (this->obj_ != nullptr)
-        delete[] this->obj_;
-    this->obj_ = nullptr;
-    this->len_ = 0;
-}
-
-const object_member& object::operator[](int index) const
-{
-    JST_DEBUG(index < size());
-    return this->obj_[index];
-}
-
-object_member& object::operator[](int index)
-{
-    JST_DEBUG(index < size());
-    return this->obj_[index];
-}
-
-bool object::empty() const
-{
-    return len_ == 0;
-}
-
-size_t object::size() const
-{
-    return len_;
-}
-
-size_t object::capacity() const
-{
-    return cap_;
-}
-
-const object_member* object::data() const
-{
-    return this->obj_;
-}
-
-object_member* object::data()
-{
-    return this->obj_;
-}
-
-const string& object::get_key(size_t index) const
-{
-    JST_DEBUG(index >= 0 && index < this->len_);
-    return obj_[index].get_key();
-}
-
-const jst_node& object::get_value(size_t index) const
-{
-    JST_DEBUG(index >= 0 && index < this->len_);
-    return obj_[index].get_value();
-}
-
-bool operator==(const string& str_1, const string& str_2)
-{
-    return (str_1.length == str_2.length) &&
-           memcmp(str_1.c_str(), str_2.c_str(), str_1.size()) == 0;
-}
 
 #define JST_KEY_NOT_EXIST ((size_t)-1)
 
@@ -575,21 +448,23 @@ const jst_node* object::find_value(const string& ky)
 {
     size_t size = this->size();
     size_t i    = JST_KEY_NOT_EXIST;
-    for (; i < size; i++) {
-        if (ky == obj_[i].get_key())
-            break;
+    for (size_t i = 0; i < size; i++) {
+        if (ky == obj_[i].get_key())\
+        sdfdsjafl
+            return i;
     }
     return i != JST_KEY_NOT_EXIST ? &obj_[i].get_value() : nullptr;
 }
 
 bool operator==(object& obj_1, object& obj_2)
 {
-    if (obj_1.len_ != obj_2.len_)
+    if (obj_1.size() != obj_2.size())
         return false;
     size_t size = obj_1.size();
     for (int i = 0; i < size; i++) {
         size_t index;
-        if ((index = obj_1.find_index(obj_2[i].get_key())) == JST_KEY_NOT_EXIST || obj_1[index] != obj_2[i])
+        if ((index = obj_1.find_index(obj_2[i].get_key())) == JST_KEY_NOT_EXIST ||
+            obj_1[index] != obj_2[i])
             return false;
     }
     return true;

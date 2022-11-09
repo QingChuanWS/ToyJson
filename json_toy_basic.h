@@ -156,34 +156,38 @@ public:
 class object : public jst_node_data
 {
 private:
-    object_member* obj_;
-    size_t len_;
-    size_t cap_;
+    jst_vector<object_member> obj_;
 
 public:
-    object();
-    explicit object(size_t length);
-    object(const object& o);
-    object& operator=(const object& o);
-    object(object&& o) noexcept;
-    object& operator=(object&& o) noexcept;
-    ~object();
+    object(){};
+    explicit object(size_t length) { obj_.reserve(length); }
+
 
 public:
-    const object_member& operator[](int index) const;
-    object_member&       operator[](int index);
+    const object_member& operator[](int index) const { return this->obj_[index]; }
+    object_member&       operator[](int index) { return this->obj_[index]; }
+
 
     size_t          find_index(const string& key);
     const jst_node* find_value(const string& key);
-    bool   empty() const;
-    size_t size() const;
-    size_t capacity() const;
+    bool            empty() const { return obj_.empty(); }
+    size_t          size() const { return obj_.size(); }
+    size_t          capacity() const { return obj_.capacity(); }
 
-    const object_member* data() const;
-    object_member*       data();
+    const object_member* data() const { return this->obj_.data(); }
+    object_member* data() { return this->obj_.data(); }
 
-    const string&   get_key(size_t index) const;
-    const jst_node& get_value(size_t index) const;
+    const string&   get_key(size_t index) const { return obj_[index].get_key(); }
+    const jst_node& get_value(size_t index) const { return obj_[index].get_value(); }
+
+public:
+    size_t insert(size_t pos, object_member& objm);
+    size_t erase(size_t pos, size_t count = 1);
+    void   push_back(const object_member& objm);
+    void   pop_back();
+    void   clear();
+    void   reserve(size_t new_cap);
+    void   shrink_to_fit();
 
 public:
     friend bool operator==(object& obj_1, object& obj_2);
