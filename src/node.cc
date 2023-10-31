@@ -1,4 +1,4 @@
-#include "json_toy_node.h"
+#include "node.h"
 
 #include <assert.h>
 
@@ -12,20 +12,20 @@
 
 namespace jst {
 template <typename JND_Type>
-static JND_Type& jst_node_data_mem_get(JNodeData& data) {
+static JND_Type& jst_node_data_mem_get(JData& data) {
   return dynamic_cast<JND_Type&>(data);
 }
 
-static shared_ptr<JNodeData> jst_node_data_copy(JType type, shared_ptr<JNodeData> jnd) {
+static shared_ptr<JData> jst_node_data_copy(JType type, shared_ptr<JData> jnd) {
   switch (type) {
     case JST_STR:
-      return std::make_shared<String>(String(jst_node_data_mem_get<String>(*jnd)));
+      return std::make_shared<JString>(JString(jst_node_data_mem_get<JString>(*jnd)));
     case JST_NUM:
-      return std::make_shared<Number>(Number(jst_node_data_mem_get<Number>(*jnd)));
+      return std::make_shared<JNumber>(JNumber(jst_node_data_mem_get<JNumber>(*jnd)));
     case JST_ARR:
-      return std::make_shared<Array>(Array(jst_node_data_mem_get<Array>(*jnd)));
+      return std::make_shared<JArray>(JArray(jst_node_data_mem_get<JArray>(*jnd)));
     case JST_OBJ:
-      return std::make_shared<Object>(Object(jst_node_data_mem_get<Object>(*jnd)));
+      return std::make_shared<JObject>(JObject(jst_node_data_mem_get<JObject>(*jnd)));
     default:
       return nullptr;
   }
@@ -46,17 +46,17 @@ JNode::JNode(JType t, const char* str, size_t len) : type(JST_NULL), data(nullpt
 JNode::JNode(JType t, double num) : type(JST_NULL), data(nullptr) {
   JST_DEBUG(t == JST_NUM);
   type = t;
-  this->data = std::make_shared<Number>(Number(num));
+  this->data = std::make_shared<JNumber>(JNumber(num));
 }
 
-JNode::JNode(JType t, Array& arr) : type(JST_ARR), data(nullptr) {
+JNode::JNode(JType t, JArray& arr) : type(JST_ARR), data(nullptr) {
   JST_DEBUG(t == JST_ARR);
-  this->data = std::make_shared<Array>(Array(arr));
+  this->data = std::make_shared<JArray>(JArray(arr));
 }
 
-JNode::JNode(JType t, Object& obj) : type(JST_OBJ), data(nullptr) {
+JNode::JNode(JType t, JObject& obj) : type(JST_OBJ), data(nullptr) {
   JST_DEBUG(t == JST_ARR);
-  this->data = std::make_shared<Object>(Object(obj));
+  this->data = std::make_shared<JObject>(JObject(obj));
 }
 
 // copy construct
@@ -98,7 +98,7 @@ JNode::~JNode() {
 }
 
 // reset the node type as JST_NULL
-void JNode::jst_node_type_reset() {
+void JNode::reset() {
   this->data = nullptr;
   type = JST_NULL;
 }
@@ -108,40 +108,40 @@ void JNode::jst_node_data_reset(const bool data) {
   this->data = nullptr;
 }
 
-void JNode::jst_node_data_reset(const String& data) {
+void JNode::jst_node_data_reset(const JString& data) {
   this->type = JST_STR;
-  this->data = std::make_shared<String>(data);
+  this->data = std::make_shared<JString>(data);
 }
 void JNode::jst_node_data_reset(const double data) {
   this->type = JST_NUM;
-  this->data = std::make_shared<Number>(data);
+  this->data = std::make_shared<JNumber>(data);
 }
-void JNode::jst_node_data_reset(const Array& data) {
+void JNode::jst_node_data_reset(const JArray& data) {
   this->type = JST_ARR;
-  this->data = std::make_shared<Array>(data);
+  this->data = std::make_shared<JArray>(data);
 }
-void JNode::jst_node_data_reset(const Object& data) {
+void JNode::jst_node_data_reset(const JObject& data) {
   this->type = JST_OBJ;
-  this->data = std::make_shared<Object>(data);
+  this->data = std::make_shared<JObject>(data);
 }
 
 // get the data of number node;
 void JNode::jst_node_data_get(double& num) const {
   JST_DEBUG(type == JST_NUM);
-  auto& this_data = jst_node_data_mem_get<Number>(*(this->data));
+  auto& this_data = jst_node_data_mem_get<JNumber>(*(this->data));
   num = this_data.num;
 }
 
 // get the data of string node;
 void JNode::jst_node_data_get(std::string& str) const {
   JST_DEBUG(type == JST_STR);
-  auto& this_data = jst_node_data_mem_get<String>(*(this->data));
+  auto& this_data = jst_node_data_mem_get<JString>(*(this->data));
   str = std::string(this_data.c_str(), this_data.size());
 }
 
 void JNode::jst_node_data_get(char** node_str, size_t& len) const {
   JST_DEBUG(type == JST_STR);
-  auto& this_data = jst_node_data_mem_get<String>(*(this->data));
+  auto& this_data = jst_node_data_mem_get<JString>(*(this->data));
   *node_str = this_data.c_str();
   len = this_data.size();
 }
@@ -151,28 +151,28 @@ void JNode::jst_node_data_get(bool& b) const {
   b = type == JST_TRUE ? true : false;
 }
 
-void JNode::jst_node_data_get(Array& arr) const {
+void JNode::jst_node_data_get(JArray& arr) const {
   JST_DEBUG(type == JST_ARR);
-  auto& this_data = jst_node_data_mem_get<Array>(*(this->data));
+  auto& this_data = jst_node_data_mem_get<JArray>(*(this->data));
   arr = this_data;
 }
 
-void JNode::jst_node_data_get(Object& obj) const {
+void JNode::jst_node_data_get(JObject& obj) const {
   JST_DEBUG(type == JST_OBJ);
-  auto& this_data = jst_node_data_mem_get<Object>(*(this->data));
+  auto& this_data = jst_node_data_mem_get<JObject>(*(this->data));
   obj = this_data;
 }
 
 size_t JNode::jst_node_data_length_get() const {
   JST_DEBUG(type == JST_STR);
-  auto& this_data = jst_node_data_mem_get<String>(*(this->data));
+  auto& this_data = jst_node_data_mem_get<JString>(*(this->data));
   return this_data.size();
 }
 
-JRType JNode::jst_node_parser_num(const std::string& str) {
+JRetType JNode::jst_node_parser_num(const std::string& str) {
   JST_CONDATION_STATE(str[0] == '0' && str.size() > 1, (*this), JST_PARSE_SINGULAR);
 
-  JRType ret = JST_PARSE_OK;
+  JRetType ret = JST_PARSE_OK;
   NumberExp exp_state;
   NumberPoint point_state;
 
@@ -214,19 +214,19 @@ JRType JNode::jst_node_parser_num(const std::string& str) {
   std::string n_str = str.substr(0, index);
   double n = std::strtod(n_str.c_str(), NULL);
   JST_CONDATION_STATE(n == HUGE_VAL || n == -HUGE_VAL, (*this), JST_PARSE_NUMBER_TOO_BIG)
-  this->data = std::make_shared<Number>(Number(n));
+  this->data = std::make_shared<JNumber>(JNumber(n));
 
   return ret;
 }
 
-JRType JNode::jst_node_parser_str(const char* str, size_t len) {
-  this->data = std::make_shared<String>(String(str, len));
+JRetType JNode::jst_node_parser_str(const char* str, size_t len) {
+  this->data = std::make_shared<JString>(JString(str, len));
   return JST_PARSE_OK;
 }
 
-JRType JNode::jst_node_data_set(JType t, const char* str, const size_t len) {
+JRetType JNode::jst_node_data_set(JType t, const char* str, const size_t len) {
   JST_DEBUG(t != JST_ARR);
-  JRType ret = JST_PARSE_OK;
+  JRetType ret = JST_PARSE_OK;
   type = t;
   if (t == JST_NULL || t == JST_TRUE || t == JST_FALSE)
     ret = JST_PARSE_OK;
@@ -238,46 +238,49 @@ JRType JNode::jst_node_data_set(JType t, const char* str, const size_t len) {
   return ret;
 }
 
-JRType JNode::jst_node_data_set(JType t, String&& s) {
+JRetType JNode::jst_node_data_set(JType t, JString&& s) {
   JST_DEBUG(t == JST_STR);
-  JRType ret = JST_PARSE_OK;
+  JRetType ret = JST_PARSE_OK;
   type = t;
-  this->data = std::make_shared<String>(String(s));
+  this->data = std::make_shared<JString>(JString(s));
   return ret;
 }
 
-JRType JNode::jst_node_data_set(JType t, Array&& arr) {
+JRetType JNode::jst_node_data_set(JType t, JArray&& arr) {
   JST_DEBUG(t == JST_ARR);
   type = t;
-  this->data = std::make_shared<Array>(Array(arr));
+  this->data = std::make_shared<JArray>(JArray(arr));
   return JST_PARSE_OK;
 }
 
-JRType JNode::jst_node_data_set(JType t, Object&& obj) {
+JRetType JNode::jst_node_data_set(JType t, JObject&& obj) {
   JST_DEBUG(t == JST_OBJ);
   type = t;
-  this->data = std::make_shared<Object>(Object(obj));
+  this->data = std::make_shared<JObject>(JObject(obj));
   return JST_PARSE_OK;
 }
 
-JRType JNode::jst_node_data_set(JType t, double num) {
+JRetType JNode::jst_node_data_set(JType t, double num) {
   JST_DEBUG(t == JST_NUM);
   type = t;
-  this->data = std::make_shared<Number>(Number(num));
+  this->data = std::make_shared<JNumber>(JNumber(num));
   return JST_PARSE_OK;
 }
 
 bool operator==(const JNode& jn_1, const JNode& jn_2) {
-  if (jn_1.jst_node_type_get() != jn_2.jst_node_type_get()) return false;
-  switch (jn_1.jst_node_type_get()) {
+  if (jn_1.get_type() != jn_2.get_type()) return false;
+  switch (jn_1.get_type()) {
     case JST_STR:
-      return jst_node_data_mem_get<String>(*jn_1.data) == jst_node_data_mem_get<String>(*jn_2.data);
+      return jst_node_data_mem_get<JString>(*jn_1.data) ==
+             jst_node_data_mem_get<JString>(*jn_2.data);
     case JST_NUM:
-      return jst_node_data_mem_get<Number>(*jn_1.data) == jst_node_data_mem_get<Number>(*jn_2.data);
+      return jst_node_data_mem_get<JNumber>(*jn_1.data) ==
+             jst_node_data_mem_get<JNumber>(*jn_2.data);
     case JST_ARR:
-      return jst_node_data_mem_get<Array>(*jn_1.data) == jst_node_data_mem_get<Array>(*jn_2.data);
+      return jst_node_data_mem_get<JArray>(*jn_1.data) == jst_node_data_mem_get<JArray>(*jn_2.data);
     case JST_OBJ:
-      return jst_node_data_mem_get<Object>(*jn_1.data) == jst_node_data_mem_get<Object>(*jn_2.data);
+      return jst_node_data_mem_get<JObject>(*jn_1.data) ==
+             jst_node_data_mem_get<JObject>(*jn_2.data);
     default:
       return true;
   }

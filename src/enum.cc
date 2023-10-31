@@ -1,4 +1,4 @@
-#include "json_toy_enum.h"
+#include "enum.h"
 
 namespace jst {
 const char* jst_ret_type_name[] = {"JST_PARSE_OK",

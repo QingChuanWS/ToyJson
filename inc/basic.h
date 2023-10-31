@@ -8,12 +8,12 @@
 #include <string>
 
 #include "enum.h"
-#include "jst_vector.h"
+#include "utils.h"
 
 namespace jst {
 
 class JNode;
-using jst::utils::jst_vector;
+using jst::utils::JVector;
 
 struct NumberExp {
   bool is_have;
@@ -27,26 +27,26 @@ struct NumberPoint {
   NumberPoint() : is_have(false), point_index(0) {}
 };
 
-class JNodeData {
+class JData {
  public:
-  JNodeData() {}
-  virtual ~JNodeData(){};
+  JData() {}
+  virtual ~JData(){};
 };
 
-class String : virtual public JNodeData {
+class JString : virtual public JData {
  private:
   size_t length;
   char* s;
 
  public:
-  explicit String() : s(nullptr), length(0) {}
-  explicit String(const char* s, size_t len = 0);
+  explicit JString() : s(nullptr), length(0) {}
+  explicit JString(const char* s, size_t len = 0);
 
-  String(const String& s);
-  String& operator=(const String& s);
-  String(String&& s) noexcept;
-  String& operator=(String&& s) noexcept;
-  ~String();
+  JString(const JString& s);
+  JString& operator=(const JString& s);
+  JString(JString&& s) noexcept;
+  JString& operator=(JString&& s) noexcept;
+  ~JString();
 
  public:
   size_t size() const;
@@ -54,31 +54,31 @@ class String : virtual public JNodeData {
   bool empty() const;
 
  public:
-  friend bool operator==(const String& str_1, const String& str_2);
+  friend bool operator==(const JString& str_1, const JString& str_2);
 };
 
-class Number : public JNodeData {
+class JNumber : public JData {
  public:
-  Number() : num(0.0) {}
-  friend bool operator==(const Number& num_1, const Number& num_2);
-  explicit Number(double n) : num(n){};
+  JNumber() : num(0.0) {}
+  friend bool operator==(const JNumber& num_1, const JNumber& num_2);
+  explicit JNumber(double n) : num(n){};
   double num;
 };
 
-class Array : public JNodeData {
+class JArray : public JData {
  private:
-  JNode* a_;
-  size_t len_;
-  size_t cap_;
+  JNode* a_ = nullptr;
+  size_t len_ = 0;
+  size_t cap_ = 0;
 
  public:
-  Array();
-  explicit Array(size_t len);
-  Array(const Array& arr);
-  Array(Array&& arr) noexcept;
-  Array& operator=(const Array& arr);
-  Array& operator=(Array&& arr) noexcept;
-  ~Array();
+  JArray() = default;
+  explicit JArray(size_t len);
+  JArray(const JArray& arr);
+  JArray(JArray&& arr) noexcept;
+  JArray& operator=(const JArray& arr);
+  JArray& operator=(JArray&& arr) noexcept;
+  ~JArray();
 
  public:
   JNode& operator[](int index);
@@ -102,71 +102,71 @@ class Array : public JNodeData {
   void shrink_to_fit();
 
  public:
-  friend bool operator==(const Array& arr_1, const Array& arr_2);
+  friend bool operator==(const JArray& left, const JArray& right);
 };
 
 // object
-class OjectMember {
+class JOjectMem {
  private:
-  String* key;
+  JString* key;
   JNode* value;
 
  public:
-  OjectMember() : key(), value() {}
-  OjectMember(const String& key, const JNode& value);
-  OjectMember(String&& key, JNode&& value);
+  JOjectMem() : key(), value() {}
+  JOjectMem(const JString& key, const JNode& value);
+  JOjectMem(JString&& key, JNode&& value);
 
-  OjectMember(const OjectMember& om);
-  OjectMember& operator=(const OjectMember& om);
-  OjectMember(OjectMember&& om) noexcept;
-  OjectMember& operator=(OjectMember&& om) noexcept;
-  ~OjectMember();
+  JOjectMem(const JOjectMem& om);
+  JOjectMem& operator=(const JOjectMem& om);
+  JOjectMem(JOjectMem&& om) noexcept;
+  JOjectMem& operator=(JOjectMem&& om) noexcept;
+  ~JOjectMem();
 
  public:
-  const String& get_key() const { return *key; }
+  const JString& get_key() const { return *key; }
   const JNode& get_value() const { return *value; }
 
  public:
-  friend bool operator==(const OjectMember objm_1, const OjectMember objm_2);
-  friend bool operator!=(const OjectMember objm_1, const OjectMember objm_2);
+  friend bool operator==(const JOjectMem objm_1, const JOjectMem objm_2);
+  friend bool operator!=(const JOjectMem objm_1, const JOjectMem objm_2);
 };
 
-class Object : public JNodeData {
+class JObject : public JData {
  private:
-  jst_vector<OjectMember> obj_;
+  JVector<JOjectMem> obj_;
 
  public:
-  Object(){};
-  explicit Object(size_t length) { obj_.reserve(length); }
+  JObject(){};
+  explicit JObject(size_t length) { obj_.reserve(length); }
 
  public:
-  const OjectMember& operator[](int index) const { return this->obj_[index]; }
-  OjectMember& operator[](int index) { return this->obj_[index]; }
+  const JOjectMem& operator[](int index) const { return this->obj_[index]; }
+  JOjectMem& operator[](int index) { return this->obj_[index]; }
 
-  size_t find_index(const String& key);
-  const JNode* find_value(const String& key);
+  size_t find_index(const JString& key);
+  const JNode* find_value(const JString& key);
   bool empty() const { return obj_.empty(); }
   size_t size() const { return obj_.size(); }
   size_t capacity() const { return obj_.capacity(); }
 
-  const OjectMember* data() const { return this->obj_.data(); }
-  OjectMember* data() { return this->obj_.data(); }
+  const JOjectMem* data() const { return this->obj_.data(); }
+  JOjectMem* data() { return this->obj_.data(); }
 
-  const String& get_key(size_t index) const { return obj_[index].get_key(); }
+  const JString& get_key(size_t index) const { return obj_[index].get_key(); }
   const JNode& get_value(size_t index) const { return obj_[index].get_value(); }
 
  public:
-  size_t insert(size_t pos, OjectMember& objm);
+  size_t insert(size_t pos, JOjectMem& objm);
   size_t erase(size_t pos, size_t count = 1);
-  void push_back(const OjectMember& objm);
+  void push_back(const JOjectMem& objm);
   void pop_back();
   void clear();
   void reserve(size_t new_cap);
   void shrink_to_fit();
 
  public:
-  friend bool operator==(Object& obj_1, Object& obj_2);
-  friend bool operator!=(Object& objm_1, Object& objm_2);
+  friend bool operator==(JObject& obj_1, JObject& obj_2);
+  friend bool operator!=(JObject& objm_1, JObject& objm_2);
 };
 
 }  // namespace jst

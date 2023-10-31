@@ -1,248 +1,10 @@
-#include <stdlib.h>
-#include <string.h>
-
-#include <cmath>
-#include <cstdlib>
-#include <iostream>
-#include <limits>
-
-#include "inc/json_toy.h"
-#include "inc/jst_vector.h"
+#include "parser.h"
+#include "utils.h"
 
 namespace jst {
 static int main_ret = 0;
 static int test_count = 0;
 static int test_pass = 0;
-
-#define EXPECT_EQ_BASE(equality, expect, actual, format)                                    \
-  do {                                                                                      \
-    test_count++;                                                                           \
-    if (equality)                                                                           \
-      test_pass++;                                                                          \
-    else {                                                                                  \
-      fprintf(stderr, "%s:%d: expect: " format " actual: " format "\n", __FILE__, __LINE__, \
-              expect, actual);                                                              \
-      main_ret = 1;                                                                         \
-    }                                                                                       \
-  } while (0)
-
-#define EXPECT_EQ_INT(expect, actual) EXPECT_EQ_BASE((expect) == (actual), expect, actual, "%d")
-
-#define EXPECT_EQ_RET(expect, actual) \
-  EXPECT_EQ_BASE((expect) == (actual), jst_ret_type_name[expect], jst_ret_type_name[actual], "%s")
-#define EXPECT_EQ_TYPE(expect, actual) \
-  EXPECT_EQ_BASE((expect) == (actual), jst_node_type_name[expect], jst_node_type_name[actual], "%s")
-
-#define EXPECT_EQ_DOUBLE(expect, actual)                                                    \
-  EXPECT_EQ_BASE((std::fabs((expect) - (actual)) < std::numeric_limits<double>::epsilon()), \
-                 expect, actual, "%.17g")
-#define EXPECT_EQ_STRING(expect, actual, alength)                                                 \
-  EXPECT_EQ_BASE(sizeof(expect) - 1 == (alength) && memcmp(expect, actual, alength) == 0, expect, \
-                 actual, "%s")
-#define EXPECT_TRUE(actual) EXPECT_EQ_BASE((actual) != 0, "true", "false", "%s")
-#define EXPECT_FALSE(actual) EXPECT_EQ_BASE((actual) == 0, "false", "true", "%s")
-
-#if defined(_MSC_VER)
-#define EXPECT_EQ_SIZE_T(expect, actual) \
-  EXPECT_EQ_BASE((expect) == (actual), (size_t)expect, (size_t)actual, "%Iu")
-#else
-#define EXPECT_EQ_SIZE_T(expect, actual) \
-  EXPECT_EQ_BASE((expect) == (actual), (size_t)expect, (size_t)actual, "%zu")
-#endif
-
-#define TEST_ERROR(error, json)                            \
-  do {                                                     \
-    JNodeContext jc(json);                                 \
-    EXPECT_EQ_RET(error, jc.jst_parser());                 \
-    EXPECT_EQ_TYPE(JST_NULL, jc.root.jst_node_type_get()); \
-  } while (0)
-
-#define TEST_NUMBER(expect, json)                         \
-  do {                                                    \
-    JNodeContext jc(json);                                \
-    EXPECT_EQ_RET(JST_PARSE_OK, jc.jst_parser());         \
-    EXPECT_EQ_TYPE(JST_NUM, jc.root.jst_node_type_get()); \
-    double num = 0.0;                                     \
-    jc.root.jst_node_data_get(num);                       \
-    EXPECT_EQ_DOUBLE(expect, num);                        \
-  } while (0)
-
-#define TEST_STRING(expect, json)                         \
-  do {                                                    \
-    JNodeContext jc(json);                                \
-    EXPECT_EQ_RET(JST_PARSE_OK, jc.jst_parser());         \
-    EXPECT_EQ_TYPE(JST_STR, jc.root.jst_node_type_get()); \
-    char* p = nullptr;                                    \
-    size_t len = 0;                                       \
-    jc.root.jst_node_data_get(&p, len);                   \
-    EXPECT_EQ_STRING(expect, p, len);                     \
-  } while (0)
-
-#define TEST_ARRAY(expect, json)                         \
-  do {                                                   \
-    JNodeContext c(json);                                \
-    EXPECT_EQ_RET(JST_PARSE_OK, c.jst_parser());         \
-    EXPECT_EQ_TYPE(JST_ARR, c.root.jst_node_type_get()); \
-    Array arr;                                           \
-    c.root.jst_node_data_get(arr);                       \
-    EXPECT_EQ_SIZE_T(expect, arr.size());                \
-  } while (0)
-
-#define TEST_NODE_STR(str, jn)                       \
-  do {                                               \
-    EXPECT_EQ_TYPE(JST_STR, jn.jst_node_type_get()); \
-    char* p = nullptr;                               \
-    size_t len = 0;                                  \
-    jn.jst_node_data_get(&p, len);                   \
-    EXPECT_EQ_STRING(str, p, len);                   \
-  } while (0)
-
-#define TEST_NODE_NUM(expect, jn)                    \
-  do {                                               \
-    EXPECT_EQ_TYPE(JST_NUM, jn.jst_node_type_get()); \
-    double num = 0.0;                                \
-    jn.jst_node_data_get(num);                       \
-    EXPECT_EQ_DOUBLE(expect, num);                   \
-  } while (0)
-
-static void test_parse_null() {
-  JNdParser jc(" null   ");
-  EXPECT_EQ_RET(JST_PARSE_OK, jc.jst_parser());
-  EXPECT_EQ_TYPE(JST_NULL, jc.root.jst_node_type_get());
-}
-
-static void test_parse_bool_true() {
-  JNdParser jc(" true   ");
-  EXPECT_EQ_RET(JST_PARSE_OK, jc.jst_parser());
-  EXPECT_EQ_TYPE(JST_TRUE, jc.root.jst_node_type_get());
-}
-
-static void test_parse_bool_false() {
-  JNdParser jc(" false   ");
-  EXPECT_EQ_RET(JST_PARSE_OK, jc.jst_parser());
-  EXPECT_EQ_TYPE(JST_FALSE, jc.root.jst_node_type_get());
-}
-
-static void test_parse_number() {
-  TEST_NUMBER(0.0, "0");
-  TEST_NUMBER(0.0, "-0");
-  TEST_NUMBER(0.0, "-0.0");
-  TEST_NUMBER(1.0, "1");
-  TEST_NUMBER(-1.0, "-1");
-  TEST_NUMBER(1.5, "1.5");
-  TEST_NUMBER(-1.5, "-1.5");
-  TEST_NUMBER(3.1416, "3.1416");
-  TEST_NUMBER(1E10, "1E10");
-  TEST_NUMBER(1e10, "1e10");
-  TEST_NUMBER(1E+10, "1E+10");
-  TEST_NUMBER(1E-10, "1E-10");
-  TEST_NUMBER(-1E10, "-1E10");
-  TEST_NUMBER(-1e10, "-1e10");
-  TEST_NUMBER(-1E+10, "-1E+10");
-  TEST_NUMBER(-1E-10, "-1E-10");
-  TEST_NUMBER(1.234E+10, "1.234E+10");
-  TEST_NUMBER(1.234E-10, "1.234E-10");
-  TEST_NUMBER(0.0, "1e-10000"); /* must underflow */
-
-  TEST_NUMBER(1.0000000000000002, "1.0000000000000002");           /* the smallest number > 1 */
-  TEST_NUMBER(4.9406564584124654e-324, "4.9406564584124654e-324"); /* minimum denormal */
-  TEST_NUMBER(-4.9406564584124654e-324, "-4.9406564584124654e-324");
-  TEST_NUMBER(2.2250738585072009e-308, "2.2250738585072009e-308"); /* Max subnormal double */
-  TEST_NUMBER(-2.2250738585072009e-308, "-2.2250738585072009e-308");
-  TEST_NUMBER(2.2250738585072014e-308, "2.2250738585072014e-308"); /* Min normal positive double */
-  TEST_NUMBER(-2.2250738585072014e-308, "-2.2250738585072014e-308");
-  TEST_NUMBER(1.7976931348623157, "1.7976931348623157"); /* Max double */
-  TEST_NUMBER(-1.7976931348623157e+308, "-1.7976931348623157e+308");
-}
-
-static void test_jst_str_node() {
-  char str[] = "Hello_world";
-  do {
-    JNode jn_r(JST_STR, str, strlen(str));
-    JNode jn = jn_r;
-    TEST_NODE_STR(str, jn_r);
-    TEST_NODE_STR(str, jn);
-  } while (0);
-  do {
-    JNode jn_r(JST_STR, str, strlen(str));
-    JNode jn;
-    jn = jn_r;
-    TEST_NODE_STR(str, jn);
-    TEST_NODE_STR(str, jn_r);
-  } while (0);
-  char str_2[] = "Nice World";
-  do {
-    JNode jn_r(JST_STR, str, strlen(str));
-    JNode jn(JST_STR, str_2, strlen(str_2));
-    jn = jn_r;
-    TEST_NODE_STR(str, jn);
-    TEST_NODE_STR(str, jn_r);
-  } while (0);
-  do {
-    JNode jn_r(JST_STR, str, strlen(str));
-    JNode jn = std::move(jn_r);
-    TEST_NODE_STR(str, jn);
-    EXPECT_EQ_TYPE(JST_NULL, jn_r.jst_node_type_get());
-  } while (0);
-  do {
-    JNode jn_r(JST_STR, str, strlen(str));
-    JNode jn(JST_STR, str_2, strlen(str_2));
-    jn = std::move(jn_r);
-    TEST_NODE_STR(str, jn);
-    EXPECT_EQ_TYPE(JST_NULL, jn_r.jst_node_type_get());
-  } while (0);
-}
-
-static void test_jst_num_node() {
-  char str[] = "1.23e3";
-  do {
-    JNode jn_r(JST_NUM, str, strlen(str));
-    JNode jn = jn_r;
-    TEST_NODE_NUM(1.23e3, jn_r);
-    TEST_NODE_NUM(1.23e3, jn);
-  } while (0);
-  do {
-    JNode jn_r(JST_STR, str, strlen(str));
-    JNode jn;
-    jn = jn_r;
-    TEST_NODE_NUM(1.23e3, jn_r);
-    TEST_NODE_NUM(1.23e3, jn);
-  } while (0);
-  char str_2[] = "5.67e3";
-  do {
-    JNode jn_r(JST_STR, str, strlen(str));
-    JNode jn(JST_STR, str_2, strlen(str_2));
-    jn = jn_r;
-    TEST_NODE_NUM(1.23e3, jn_r);
-    TEST_NODE_NUM(1.23e3, jn);
-  } while (0);
-  do {
-    JNode jn_r(JST_STR, str, strlen(str));
-    JNode jn = std::move(jn_r);
-    TEST_NODE_NUM(1.23e3, jn_r);
-    EXPECT_EQ_INT(JST_NULL, jn_r.jst_node_type_get());
-  } while (0);
-  do {
-    JNode jn_r(JST_STR, str, strlen(str));
-    JNode jn(JST_STR, str_2, strlen(str_2));
-    jn = std::move(jn_r);
-    TEST_NODE_NUM(1.23e3, jn_r);
-    EXPECT_EQ_INT(JST_NULL, jn_r.jst_node_type_get());
-  } while (0);
-}
-
-static void test_parse_string() {
-  TEST_STRING("", "\"\"");
-  TEST_STRING("Hello", "\"Hello\"");
-  TEST_STRING("Hello\nWorld", "\"Hello\\nWorld\"");
-  TEST_STRING("\" \\ / \b \f \n \r \t", "\"\\\" \\\\ \\/ \\b \\f \\n \\r \\t\"");
-  TEST_STRING("Hello\0World", "\"Hello\\u0000World\"");
-  TEST_STRING("\x24", "\"\\u0024\"");                    /* Dollar sign U+0024 */
-  TEST_STRING("\xC2\xA2", "\"\\u00A2\"");                /* Cents sign U+00A2 */
-  TEST_STRING("\xE2\x82\xAC", "\"\\u20AC\"");            /* Euro sign U+20AC */
-  TEST_STRING("\xF0\x9D\x84\x9E", "\"\\uD834\\uDD1E\""); /* G clef sign U+1D11E */
-  TEST_STRING("\xF0\x9D\x84\x9E", "\"\\ud834\\udd1e\""); /* G clef sign U+1D11E */
-}
 
 static void test_parse_expect_value() {
   TEST_ERROR(JST_PARSE_EXCEPT_VALUE, " ");
@@ -325,130 +87,6 @@ static void test_parse_invalid_unicode_surrogate() {
   TEST_ERROR(JST_PARSE_INVALID_UNICODE_SURROGATE, "\"\\uD800\\uE000\"");
 }
 
-static void test_parser_array_1() {
-  JNdParser c("[ null , false , true , 123 , \"abc\" ]");
-  EXPECT_EQ_RET(JST_PARSE_OK, c.jst_parser());
-  EXPECT_EQ_TYPE(JST_ARR, c.root.jst_node_type_get());
-  Array arr;
-  c.root.jst_node_data_get(arr);
-  EXPECT_EQ_TYPE(JST_NULL, arr[0].jst_node_type_get());
-  EXPECT_EQ_TYPE(JST_FALSE, arr[1].jst_node_type_get());
-  EXPECT_EQ_TYPE(JST_TRUE, arr[2].jst_node_type_get());
-  TEST_NODE_NUM(123.0, arr[3]);
-  TEST_NODE_STR("abc", arr[4]);
-}
-
-static void test_parser_array_2() {
-  JNdParser c("[ [ ] , [ 0 ] , [ 0 , 1 ] , [ 0 , 1 , 2 ] ]");
-  EXPECT_EQ_INT(JST_PARSE_OK, c.jst_parser());
-  EXPECT_EQ_INT(JST_ARR, c.root.jst_node_type_get());
-  Array arr;
-  c.root.jst_node_data_get(arr);
-
-  do {
-    EXPECT_EQ_SIZE_T(JST_ARR, arr[0].jst_node_type_get());
-    Array arr_p;
-    arr[0].jst_node_data_get(arr_p);
-    EXPECT_EQ_SIZE_T(0, arr_p.size());
-  } while (0);
-
-  do {
-    EXPECT_EQ_SIZE_T(JST_ARR, arr[1].jst_node_type_get());
-    Array arr_p;
-    arr[1].jst_node_data_get(arr_p);
-    EXPECT_EQ_SIZE_T(1, arr_p.size());
-    TEST_NODE_NUM(0.0, arr_p[0]);
-  } while (0);
-
-  do {
-    EXPECT_EQ_SIZE_T(JST_ARR, arr[2].jst_node_type_get());
-    Array arr_p;
-    arr[2].jst_node_data_get(arr_p);
-    EXPECT_EQ_SIZE_T(2, arr_p.size());
-    TEST_NODE_NUM(0.0, arr_p[0]);
-    TEST_NODE_NUM(1.0, arr_p[1]);
-  } while (0);
-
-  do {
-    EXPECT_EQ_SIZE_T(JST_ARR, arr[3].jst_node_type_get());
-    Array arr_p;
-    arr[3].jst_node_data_get(arr_p);
-    EXPECT_EQ_SIZE_T(3, arr_p.size());
-    TEST_NODE_NUM(0.0, arr_p[0]);
-    TEST_NODE_NUM(1.0, arr_p[1]);
-    TEST_NODE_NUM(2.0, arr_p[2]);
-  } while (0);
-}
-
-static void test_parse_array() {
-  TEST_ARRAY(0, "[ ]");
-  test_parser_array_1();
-  test_parser_array_2();
-}
-
-#define TEST_OBJ_KEY(str, key) EXPECT_EQ_STRING(str, key.c_str(), key.size());
-
-static void test_parse_object() {
-  JNdParser c(
-      " { "
-      "\"n\" : null , "
-      "\"f\" : false , "
-      "\"t\" : true , "
-      "\"i\" : 123 , "
-      "\"s\" : \"abc\", "
-      "\"a\" : [ 1, 2, 3 ],"
-      "\"o\" : { \"1\" : 1, \"2\" : 2, \"3\" : 3 }"
-      " } ");
-  EXPECT_EQ_RET(JST_PARSE_OK, c.jst_parser());
-  EXPECT_EQ_TYPE(JST_OBJ, c.root.jst_node_type_get());
-  Object obj;
-  c.root.jst_node_data_get(obj);
-  EXPECT_EQ_SIZE_T(7, obj.size());
-
-  TEST_OBJ_KEY("n", obj[0].get_key());
-  EXPECT_EQ_TYPE(JST_NULL, obj[0].get_value().jst_node_type_get());
-
-  TEST_OBJ_KEY("f", obj[1].get_key());
-  EXPECT_EQ_TYPE(JST_FALSE, obj[1].get_value().jst_node_type_get());
-
-  TEST_OBJ_KEY("t", obj[2].get_key());
-  EXPECT_EQ_TYPE(JST_TRUE, obj[2].get_value().jst_node_type_get());
-
-  TEST_OBJ_KEY("i", obj[3].get_key());
-  TEST_NODE_NUM(123.0, obj[3].get_value());
-
-  TEST_OBJ_KEY("s", obj[4].get_key());
-  TEST_NODE_STR("abc", obj[4].get_value());
-
-  TEST_OBJ_KEY("a", obj[5].get_key());
-  do {
-    EXPECT_EQ_SIZE_T(JST_ARR, obj[5].get_value().jst_node_type_get());
-    Array arr_p;
-    obj[5].get_value().jst_node_data_get(arr_p);
-    EXPECT_EQ_SIZE_T(3, arr_p.size());
-    TEST_NODE_NUM(1.0, arr_p[0]);
-    TEST_NODE_NUM(2.0, arr_p[1]);
-    TEST_NODE_NUM(3.0, arr_p[2]);
-  } while (0);
-
-  TEST_OBJ_KEY("o", obj[6].get_key());
-  EXPECT_EQ_TYPE(JST_OBJ, obj[6].get_value().jst_node_type_get());
-  do {
-    EXPECT_EQ_SIZE_T(JST_OBJ, obj[6].get_value().jst_node_type_get());
-    Object obj_p;
-    obj[6].get_value().jst_node_data_get(obj_p);
-    EXPECT_EQ_SIZE_T(3, obj_p.size());
-
-    TEST_OBJ_KEY("1", obj_p[0].get_key());
-    TEST_NODE_NUM(1.0, obj_p[0].get_value());
-
-    TEST_OBJ_KEY("2", obj_p[1].get_key());
-    TEST_NODE_NUM(2.0, obj_p[1].get_value());
-
-    TEST_OBJ_KEY("3", obj_p[2].get_key());
-    TEST_NODE_NUM(3.0, obj_p[2].get_value());
-  } while (0);
-}
 
 static void test_parse_miss_comma_or_square_bracket() {
   TEST_ERROR(JST_PARSE_MISS_COMMA_OR_SQUARE_BRACKET, "[1");
@@ -483,7 +121,7 @@ static void test_parse_miss_comma_or_curly_bracket() {
 
 #define TEST_ROUNDTRIP(json)                                                    \
   do {                                                                          \
-    JNodeContext jc(json);                                                      \
+    JParser jc(json);                                                           \
     EXPECT_EQ_INT(JST_PARSE_OK, jc.jst_parser());                               \
     char* json2;                                                                \
     size_t length;                                                              \
@@ -546,7 +184,7 @@ static void test_stringify() {
 
 #define TEST_EQUAL(json1, json2, equality)             \
   do {                                                 \
-    JNodeContext jc(json1);                            \
+    JParser jc(json1);                                 \
     JNode jn_1;                                        \
     EXPECT_EQ_INT(JST_PARSE_OK, jc.jst_parser(&jn_1)); \
     jc.reset(json2);                                   \
@@ -582,7 +220,7 @@ static void test_equal() {
 }
 
 static void test_copy() {
-  JNdParser jc("{\"t\":true,\"f\":false,\"n\":null,\"d\":1.5,\"a\":[1,2,3]}");
+  JParser jc("{\"t\":true,\"f\":false,\"n\":null,\"d\":1.5,\"a\":[1,2,3]}");
   JNode jn_1, jn_2;
   jc.jst_parser(&jn_1);
   jn_2 = jn_1;
@@ -591,11 +229,11 @@ static void test_copy() {
 
 static void test_move() {
   JNode jn_1, jn_2, jn_3;
-  JNdParser jc("{\"t\":true,\"f\":false,\"n\":null,\"d\":1.5,\"a\":[1,2,3]}");
+  JParser jc("{\"t\":true,\"f\":false,\"n\":null,\"d\":1.5,\"a\":[1,2,3]}");
   jc.jst_parser(&jn_1);
   jn_2 = jn_1;
   jn_3 = std::move(jn_2);
-  EXPECT_EQ_INT(JST_NULL, jn_2.jst_node_type_get());
+  EXPECT_EQ_INT(JST_NULL, jn_2.get_type());
   EXPECT_TRUE(jn_1 == jn_3);
 }
 
@@ -614,8 +252,8 @@ static void test_swap() {
 static void test_access_null() {
   JNode jn;
   jn.jst_node_data_set(JST_STR, "a", 1);
-  jn.jst_node_type_reset();
-  EXPECT_EQ_INT(JST_NULL, jn.jst_node_type_get());
+  jn.reset();
+  EXPECT_EQ_INT(JST_NULL, jn.get_type());
 }
 
 static void test_access_boolean() {
@@ -646,13 +284,13 @@ static void test_access_string() {
   size_t str_len;
   jn.jst_node_data_get(&str_head, str_len);
   EXPECT_EQ_STRING("", str_head, str_len);
-  jn.jst_node_data_reset(String("Hello", 5));
+  jn.jst_node_data_reset(JString("Hello", 5));
   jn.jst_node_data_get(&str_head, str_len);
   EXPECT_EQ_STRING("Hello", str_head, str_len);
 }
 
 static void test_access_array() {
-  Array a;
+  JArray a;
   JNode e;
   size_t i, j;
 
@@ -725,7 +363,7 @@ static void test_access_array() {
     EXPECT_EQ_DOUBLE((double)i, num);
   }
 
-  e.jst_node_data_reset(String("Hello", 5));
+  e.jst_node_data_reset(JString("Hello", 5));
   a.push_back(e);
 
   i = a.capacity();
@@ -735,9 +373,9 @@ static void test_access_array() {
 }
 
 static void test_access_vector() {
-  using jst::utils::jst_vector;
+  using jst::utils::JVector;
 
-  jst_vector<JNode> v;
+  JVector<JNode> v;
   JNode e;
   size_t i, j;
 
@@ -810,7 +448,7 @@ static void test_access_vector() {
     EXPECT_EQ_DOUBLE((double)i, num);
   }
 
-  e.jst_node_data_reset(String("Hello", 5));
+  e.jst_node_data_reset(JString("Hello", 5));
   v.push_back(e);
 
   i = v.capacity();
@@ -819,7 +457,77 @@ static void test_access_vector() {
   EXPECT_EQ_SIZE_T(i, v.capacity()); /* capacity remains unchanged */
 }
 
-static void test_access_object() {}
+static void test_access_object() {
+   // lept_value o, v, *pv;
+    // size_t i, j, index;
+
+    // lept_init(&o);
+
+    // for (j = 0; j <= 5; j += 5) {
+    //     lept_set_object(&o, j);
+    //     EXPECT_EQ_SIZE_T(0, lept_get_object_size(&o));
+    //     EXPECT_EQ_SIZE_T(j, lept_get_object_capacity(&o));
+    //     for (i = 0; i < 10; i++) {
+    //         char key[2] = "a";
+    //         key[0] += i;
+    //         lept_init(&v);
+    //         lept_set_number(&v, i);
+    //         lept_move(lept_set_object_value(&o, key, 1), &v);
+    //         lept_free(&v);
+    //     }
+    //     EXPECT_EQ_SIZE_T(10, lept_get_object_size(&o));
+    //     for (i = 0; i < 10; i++) {
+    //         char key[] = "a";
+    //         key[0] += i;
+    //         index = lept_find_object_index(&o, key, 1);
+    //         EXPECT_TRUE(index != LEPT_KEY_NOT_EXIST);
+    //         pv = lept_get_object_value(&o, index);
+    //         EXPECT_EQ_DOUBLE((double)i, lept_get_number(pv));
+    //     }
+    // }
+
+    // index = lept_find_object_index(&o, "j", 1);
+    // EXPECT_TRUE(index != LEPT_KEY_NOT_EXIST);
+    // lept_remove_object_value(&o, index);
+    // index = lept_find_object_index(&o, "j", 1);
+    // EXPECT_TRUE(index == LEPT_KEY_NOT_EXIST);
+    // EXPECT_EQ_SIZE_T(9, lept_get_object_size(&o));
+
+    // index = lept_find_object_index(&o, "a", 1);
+    // EXPECT_TRUE(index != LEPT_KEY_NOT_EXIST);
+    // lept_remove_object_value(&o, index);
+    // index = lept_find_object_index(&o, "a", 1);
+    // EXPECT_TRUE(index == LEPT_KEY_NOT_EXIST);
+    // EXPECT_EQ_SIZE_T(8, lept_get_object_size(&o));
+
+    // EXPECT_TRUE(lept_get_object_capacity(&o) > 8);
+    // lept_shrink_object(&o);
+    // EXPECT_EQ_SIZE_T(8, lept_get_object_capacity(&o));
+    // EXPECT_EQ_SIZE_T(8, lept_get_object_size(&o));
+    // for (i = 0; i < 8; i++) {
+    //     char key[] = "a";
+    //     key[0] += i + 1;
+    //     EXPECT_EQ_DOUBLE((double)i + 1, lept_get_number(lept_get_object_value(&o,
+    //     lept_find_object_index(&o, key, 1))));
+    // }
+
+    // lept_set_string(&v, "Hello", 5);
+    // lept_move(lept_set_object_value(&o, "World", 5), &v); /* Test if element is freed */
+    // lept_free(&v);
+
+    // pv = lept_find_object_value(&o, "World", 5);
+    // EXPECT_TRUE(pv != NULL);
+    // EXPECT_EQ_STRING("Hello", lept_get_string(pv), lept_get_string_length(pv));
+
+    // i = lept_get_object_capacity(&o);
+    // lept_clear_object(&o);
+    // EXPECT_EQ_SIZE_T(0, lept_get_object_size(&o));
+    // EXPECT_EQ_SIZE_T(i, lept_get_object_capacity(&o)); /* capacity remains unchanged */
+    // lept_shrink_object(&o);
+    // EXPECT_EQ_SIZE_T(0, lept_get_object_capacity(&o));
+
+    // lept_free(&o);
+}
 
 static void test_access() {
   test_access_null();
@@ -832,14 +540,6 @@ static void test_access() {
 }
 
 static void test_parse() {
-  test_parse_null();
-  test_parse_bool_true();
-  test_parse_bool_false();
-  test_parse_number();
-  test_parse_string();
-  test_parse_array();
-  // test_parse_object();
-
   test_parse_expect_value();
   test_parse_invalid_value();
   test_parse_root_not_singular();
@@ -853,6 +553,82 @@ static void test_parse() {
   // test_parse_miss_key();
   // test_parse_miss_colon();
   // test_parse_miss_comma_or_curly_bracket();
+}
+
+static void test_jst_str_node() {
+  char str[] = "Hello_world";
+  do {
+    JNode jn_r(JST_STR, str, strlen(str));
+    JNode jn = jn_r;
+    TEST_NODE_STR(str, jn_r);
+    TEST_NODE_STR(str, jn);
+  } while (0);
+  do {
+    JNode jn_r(JST_STR, str, strlen(str));
+    JNode jn;
+    jn = jn_r;
+    TEST_NODE_STR(str, jn);
+    TEST_NODE_STR(str, jn_r);
+  } while (0);
+  char str_2[] = "Nice World";
+  do {
+    JNode jn_r(JST_STR, str, strlen(str));
+    JNode jn(JST_STR, str_2, strlen(str_2));
+    jn = jn_r;
+    TEST_NODE_STR(str, jn);
+    TEST_NODE_STR(str, jn_r);
+  } while (0);
+  do {
+    JNode jn_r(JST_STR, str, strlen(str));
+    JNode jn = std::move(jn_r);
+    TEST_NODE_STR(str, jn);
+    EXPECT_EQ_TYPE(JST_NULL, jn_r.get_type());
+  } while (0);
+  do {
+    JNode jn_r(JST_STR, str, strlen(str));
+    JNode jn(JST_STR, str_2, strlen(str_2));
+    jn = std::move(jn_r);
+    TEST_NODE_STR(str, jn);
+    EXPECT_EQ_TYPE(JST_NULL, jn_r.get_type());
+  } while (0);
+}
+
+static void test_jst_num_node() {
+  char str[] = "1.23e3";
+  do {
+    JNode jn_r(JST_NUM, str, strlen(str));
+    JNode jn = jn_r;
+    TEST_NODE_NUM(1.23e3, jn_r);
+    TEST_NODE_NUM(1.23e3, jn);
+  } while (0);
+  do {
+    JNode jn_r(JST_STR, str, strlen(str));
+    JNode jn;
+    jn = jn_r;
+    TEST_NODE_NUM(1.23e3, jn_r);
+    TEST_NODE_NUM(1.23e3, jn);
+  } while (0);
+  char str_2[] = "5.67e3";
+  do {
+    JNode jn_r(JST_STR, str, strlen(str));
+    JNode jn(JST_STR, str_2, strlen(str_2));
+    jn = jn_r;
+    TEST_NODE_NUM(1.23e3, jn_r);
+    TEST_NODE_NUM(1.23e3, jn);
+  } while (0);
+  do {
+    JNode jn_r(JST_STR, str, strlen(str));
+    JNode jn = std::move(jn_r);
+    TEST_NODE_NUM(1.23e3, jn_r);
+    EXPECT_EQ_INT(JST_NULL, jn_r.get_type());
+  } while (0);
+  do {
+    JNode jn_r(JST_STR, str, strlen(str));
+    JNode jn(JST_STR, str_2, strlen(str_2));
+    jn = std::move(jn_r);
+    TEST_NODE_NUM(1.23e3, jn_r);
+    EXPECT_EQ_INT(JST_NULL, jn_r.get_type());
+  } while (0);
 }
 
 }  // namespace jst
