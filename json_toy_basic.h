@@ -12,42 +12,42 @@
 
 namespace jst {
 
-class jst_node;
+class JNode;
 using jst::utils::jst_vector;
 using std::shared_ptr;
 
-struct jst_num_exp {
+struct NumberExp {
   bool is_have;
   int exp_index;
-  jst_num_exp() : is_have(false), exp_index(0) {}
+  NumberExp() : is_have(false), exp_index(0) {}
 };
 
-struct jst_num_point {
+struct NumberPoint {
   bool is_have;
   int point_index;
-  jst_num_point() : is_have(false), point_index(0) {}
+  NumberPoint() : is_have(false), point_index(0) {}
 };
 
-class jst_node_data {
+class JNodeData {
  public:
-  jst_node_data() {}
-  virtual ~jst_node_data(){};
+  JNodeData() {}
+  virtual ~JNodeData(){};
 };
 
-class string : virtual public jst_node_data {
+class String : virtual public JNodeData {
  private:
   size_t length;
   char* s;
 
  public:
-  explicit string() : s(nullptr), length(0) {}
-  explicit string(const char* s, size_t len = 0);
+  explicit String() : s(nullptr), length(0) {}
+  explicit String(const char* s, size_t len = 0);
 
-  string(const string& s);
-  string& operator=(const string& s);
-  string(string&& s) noexcept;
-  string& operator=(string&& s) noexcept;
-  ~string();
+  String(const String& s);
+  String& operator=(const String& s);
+  String(String&& s) noexcept;
+  String& operator=(String&& s) noexcept;
+  ~String();
 
  public:
   size_t size() const;
@@ -55,119 +55,119 @@ class string : virtual public jst_node_data {
   bool empty() const;
 
  public:
-  friend bool operator==(const string& str_1, const string& str_2);
+  friend bool operator==(const String& str_1, const String& str_2);
 };
 
-class number : public jst_node_data {
+class Number : public JNodeData {
  public:
-  number() : num(0.0) {}
-  friend bool operator==(const number& num_1, const number& num_2);
-  explicit number(double n) : num(n){};
+  Number() : num(0.0) {}
+  friend bool operator==(const Number& num_1, const Number& num_2);
+  explicit Number(double n) : num(n){};
   double num;
 };
 
-class array : public jst_node_data {
+class Array : public JNodeData {
  private:
-  jst_node* a_;
+  JNode* a_;
   size_t len_;
   size_t cap_;
 
  public:
-  array();
-  explicit array(size_t len);
-  array(const array& arr);
-  array(array&& arr) noexcept;
-  array& operator=(const array& arr);
-  array& operator=(array&& arr) noexcept;
-  ~array();
+  Array();
+  explicit Array(size_t len);
+  Array(const Array& arr);
+  Array(Array&& arr) noexcept;
+  Array& operator=(const Array& arr);
+  Array& operator=(Array&& arr) noexcept;
+  ~Array();
 
  public:
-  jst_node& operator[](int index);
-  const jst_node& operator[](int index) const;
+  JNode& operator[](int index);
+  const JNode& operator[](int index) const;
 
-  size_t find(const jst_node& jn) const;
+  size_t find(const JNode& jn) const;
   size_t size() const;
   size_t capacity() const;
   bool empty() const;
 
-  const jst_node* data() const;
-  jst_node* data();
+  const JNode* data() const;
+  JNode* data();
 
  public:
-  size_t insert(size_t pos, jst_node& jn);
+  size_t insert(size_t pos, JNode& jn);
   size_t erase(size_t pos, size_t count = 1);
-  void push_back(const jst_node& jn);
+  void push_back(const JNode& jn);
   void pop_back();
   void clear();
   void reserve(size_t new_cap);
   void shrink_to_fit();
 
  public:
-  friend bool operator==(const array& arr_1, const array& arr_2);
+  friend bool operator==(const Array& arr_1, const Array& arr_2);
 };
 
 // object
-class object_member {
+class OjectMember {
  private:
-  string* key;
-  jst_node* value;
+  String* key;
+  JNode* value;
 
  public:
-  object_member() : key(), value() {}
-  object_member(const string& key, const jst_node& value);
-  object_member(string&& key, jst_node&& value);
+  OjectMember() : key(), value() {}
+  OjectMember(const String& key, const JNode& value);
+  OjectMember(String&& key, JNode&& value);
 
-  object_member(const object_member& om);
-  object_member& operator=(const object_member& om);
-  object_member(object_member&& om) noexcept;
-  object_member& operator=(object_member&& om) noexcept;
-  ~object_member();
-
- public:
-  const string& get_key() const { return *key; }
-  const jst_node& get_value() const { return *value; }
+  OjectMember(const OjectMember& om);
+  OjectMember& operator=(const OjectMember& om);
+  OjectMember(OjectMember&& om) noexcept;
+  OjectMember& operator=(OjectMember&& om) noexcept;
+  ~OjectMember();
 
  public:
-  friend bool operator==(const object_member objm_1, const object_member objm_2);
-  friend bool operator!=(const object_member objm_1, const object_member objm_2);
+  const String& get_key() const { return *key; }
+  const JNode& get_value() const { return *value; }
+
+ public:
+  friend bool operator==(const OjectMember objm_1, const OjectMember objm_2);
+  friend bool operator!=(const OjectMember objm_1, const OjectMember objm_2);
 };
 
-class object : public jst_node_data {
+class Object : public JNodeData {
  private:
-  jst_vector<object_member> obj_;
+  jst_vector<OjectMember> obj_;
 
  public:
-  object(){};
-  explicit object(size_t length) { obj_.reserve(length); }
+  Object(){};
+  explicit Object(size_t length) { obj_.reserve(length); }
 
  public:
-  const object_member& operator[](int index) const { return this->obj_[index]; }
-  object_member& operator[](int index) { return this->obj_[index]; }
+  const OjectMember& operator[](int index) const { return this->obj_[index]; }
+  OjectMember& operator[](int index) { return this->obj_[index]; }
 
-  size_t find_index(const string& key);
-  const jst_node* find_value(const string& key);
+  size_t find_index(const String& key);
+  const JNode* find_value(const String& key);
   bool empty() const { return obj_.empty(); }
   size_t size() const { return obj_.size(); }
   size_t capacity() const { return obj_.capacity(); }
 
-  const object_member* data() const { return this->obj_.data(); }
-  object_member* data() { return this->obj_.data(); }
+  const OjectMember* data() const { return this->obj_.data(); }
+  OjectMember* data() { return this->obj_.data(); }
 
-  const string& get_key(size_t index) const { return obj_[index].get_key(); }
-  const jst_node& get_value(size_t index) const { return obj_[index].get_value(); }
+  const String& get_key(size_t index) const { return obj_[index].get_key(); }
+  const JNode& get_value(size_t index) const { return obj_[index].get_value(); }
 
  public:
-  size_t insert(size_t pos, object_member& objm);
+  size_t insert(size_t pos, OjectMember& objm);
   size_t erase(size_t pos, size_t count = 1);
-  void push_back(const object_member& objm);
+  void push_back(const OjectMember& objm);
   void pop_back();
   void clear();
   void reserve(size_t new_cap);
   void shrink_to_fit();
 
  public:
-  friend bool operator==(object& obj_1, object& obj_2);
-  friend bool operator!=(object& objm_1, object& objm_2);
+  friend bool operator==(Object& obj_1, Object& obj_2);
+  friend bool operator!=(Object& objm_1, Object& objm_2);
 };
 
 }  // namespace jst
