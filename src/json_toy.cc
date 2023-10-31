@@ -10,10 +10,10 @@
 #include <stack>
 #include <string>
 
-#include "json_toy_enum.h"
+#include "enum.h"
 
 namespace jst {
-JNodeContext::JNodeContext(const JNodeContext& context)
+JNdParser::JNdParser(const JNdParser& context)
     : str(context.str), str_index(context.str_index), root(context.root) {
   if (context.stack == nullptr) {
     stack = nullptr, size = 0, top = 0;
@@ -26,7 +26,7 @@ JNodeContext::JNodeContext(const JNodeContext& context)
   std::memcpy(stack, context.stack, size);
 }
 
-JNodeContext& JNodeContext::operator=(const JNodeContext& context) {
+JNdParser& JNdParser::operator=(const JNdParser& context) {
   this->str = context.str;
   this->root = context.root;
   this->str_index = context.str_index;
@@ -40,7 +40,7 @@ JNodeContext& JNodeContext::operator=(const JNodeContext& context) {
   return *this;
 }
 
-JNodeContext::JNodeContext(JNodeContext&& context)
+JNdParser::JNdParser(JNdParser&& context)
     : str(std::move(context.str)), root(std::move(context.root)) {
   this->stack = context.stack;
   this->size = context.size;
@@ -53,7 +53,7 @@ JNodeContext::JNodeContext(JNodeContext&& context)
   context.str_index = 0;
 }
 
-JNodeContext& JNodeContext::operator=(JNodeContext&& context) {
+JNdParser& JNdParser::operator=(JNdParser&& context) {
   str = std::move(context.str);
   root = std::move(context.root);
 
@@ -70,7 +70,7 @@ JNodeContext& JNodeContext::operator=(JNodeContext&& context) {
   return *this;
 }
 
-JNodeContext::~JNodeContext() {
+JNdParser::~JNdParser() {
   JST_DEBUG(top == 0);
   if (this->stack != nullptr) free(stack);
   this->stack = 0;
@@ -79,7 +79,7 @@ JNodeContext::~JNodeContext() {
   this->top = 0;
 }
 
-void* JNodeContext::stack_push(size_t p_size) {
+void* JNdParser::stack_push(size_t p_size) {
   JST_DEBUG(p_size > 0);
   if (size == 0) {
     this->size = init_stack_size;
@@ -95,13 +95,13 @@ void* JNodeContext::stack_push(size_t p_size) {
   return ret;
 }
 
-void* JNodeContext::stack_pop(size_t p_size) {
+void* JNdParser::stack_pop(size_t p_size) {
   JST_DEBUG(this->top >= p_size);
   top -= p_size;
   return this->stack + top;
 }
 
-void JNodeContext::reset(const std::string& j_str) {
+void JNdParser::reset(const std::string& j_str) {
   JST_DEBUG(top == 0);
   this->str = j_str;
   if (this->stack != nullptr) free(stack);
@@ -111,14 +111,14 @@ void JNodeContext::reset(const std::string& j_str) {
   this->top = 0;
 }
 
-JRType JNodeContext::jst_parser(JNode* node) {
+JRType JNdParser::jst_parser(JNode* node) {
   if (node == nullptr)
     return jst_val_parser(root);
   else
     return jst_val_parser(*node);
 }
 
-JRType JNodeContext::jst_ws_parser(jst_ws_state state, JType t) {
+JRType JNdParser::jst_ws_parser(jst_ws_state state, JType t) {
   int ws_count = 0;
   int index = this->str_index;
   JRType ret = JST_PARSE_OK;
@@ -148,7 +148,7 @@ JRType JNodeContext::jst_ws_parser(jst_ws_state state, JType t) {
   return ret;
 }
 
-JRType JNodeContext::jst_val_parser_symbol(JNode& node) {
+JRType JNdParser::jst_val_parser_symbol(JNode& node) {
   JType t;
   int index = this->str_index;
   if (str[index] == 't') {
@@ -175,7 +175,7 @@ JRType JNodeContext::jst_val_parser_symbol(JNode& node) {
   return JST_PARSE_OK;
 }
 
-JRType JNodeContext::jst_val_parser_number(JNode& node) {
+JRType JNdParser::jst_val_parser_number(JNode& node) {
   JST_DEBUG(std::isdigit(this->str[this->str_index]) || this->str[this->str_index] == '+' ||
             this->str[this->str_index] == '-');
 
@@ -197,7 +197,7 @@ JRType JNodeContext::jst_val_parser_number(JNode& node) {
   return JST_PARSE_OK;
 }
 
-JRType JNodeContext::jst_val_parser_str_utf(unsigned hex, std::vector<char>& sp_vec) {
+JRType JNdParser::jst_val_parser_str_utf(unsigned hex, std::vector<char>& sp_vec) {
   if (hex >= 0x0000 && hex <= 0x007F) {
     sp_vec.push_back(hex & 0x00FF);
   } else if (hex >= 0x0080 && hex <= 0x07FF) {
@@ -222,7 +222,7 @@ JRType JNodeContext::jst_val_parser_str_utf(unsigned hex, std::vector<char>& sp_
   ret = ret_type;                             \
   break
 
-inline JRType JNodeContext::jst_val_parser_str_sp(int& index, std::vector<char>& sp_char) {
+inline JRType JNdParser::jst_val_parser_str_sp(int& index, std::vector<char>& sp_char) {
   JRType ret = JST_PARSE_OK;
   switch (this->str[index]) {
     case 'n':
@@ -279,7 +279,7 @@ inline JRType JNodeContext::jst_val_parser_str_sp(int& index, std::vector<char>&
   return ret;
 }
 
-JRType JNodeContext::jst_val_parser_string_base(String& s) {
+JRType JNdParser::jst_val_parser_string_base(String& s) {
   JST_DEBUG(this->str[this->str_index] == '\"');
   JRType ret = JST_PARSE_OK;
 
@@ -332,7 +332,7 @@ RET:
   return ret;
 }
 
-JRType JNodeContext::jst_val_parser_string(JNode& node) {
+JRType JNdParser::jst_val_parser_string(JNode& node) {
   std::unique_ptr<String> s = std::make_unique<String>(String());
   JRType ret = jst_val_parser_string_base(*s);
   if (ret != JST_PARSE_OK)
@@ -342,7 +342,7 @@ JRType JNodeContext::jst_val_parser_string(JNode& node) {
   return ret;
 }
 
-JRType JNodeContext::jst_val_parser_array(JNode& node) {
+JRType JNdParser::jst_val_parser_array(JNode& node) {
   JST_DEBUG(this->str[this->str_index++] == '[');
   JST_FUNCTION_STATE(JST_PARSE_OK, jst_ws_parser(JST_WS_BEFORE), node);
 
@@ -402,7 +402,7 @@ JRType JNodeContext::jst_val_parser_array(JNode& node) {
   return ret;
 }
 
-JRType JNodeContext::jst_val_parser_object_member(OjectMember& objm) {
+JRType JNdParser::jst_val_parser_object_member(OjectMember& objm) {
   JRType ret = JST_PARSE_OK;
   std::unique_ptr<String> s = std::make_unique<String>(String());
   std::unique_ptr<JNode> jn = std::make_unique<JNode>(JNode());
@@ -427,7 +427,7 @@ JRType JNodeContext::jst_val_parser_object_member(OjectMember& objm) {
   return ret;
 }
 
-JRType JNodeContext::jst_val_parser_object(JNode& node) {
+JRType JNdParser::jst_val_parser_object(JNode& node) {
   JST_DEBUG(this->str[this->str_index++] == '{');
   JST_FUNCTION_STATE(JST_PARSE_OK, jst_ws_parser(JST_WS_BEFORE), node);
 
@@ -488,7 +488,7 @@ JRType JNodeContext::jst_val_parser_object(JNode& node) {
   return ret;
 }
 
-JRType JNodeContext::jst_val_parser(JNode& node, bool is_local) {
+JRType JNdParser::jst_val_parser(JNode& node, bool is_local) {
   if (!is_local) JST_FUNCTION_STATE(JST_PARSE_OK, jst_ws_parser(JST_WS_BEFORE), root);
 
   JRType ret = JST_PARSE_OK;
@@ -542,7 +542,7 @@ JRType JNodeContext::jst_val_parser(JNode& node, bool is_local) {
     *str_head = json_c;                          \
   } while (0)
 
-void JNodeContext::jst_stringify_string(const JNode& jn) {
+void JNdParser::jst_stringify_string(const JNode& jn) {
   JST_DEBUG(jn.jst_node_type_get() == JST_STR);
   char* json_str;
   size_t json_str_len;
@@ -585,7 +585,7 @@ void JNodeContext::jst_stringify_string(const JNode& jn) {
   PUT_C('"');
 }
 
-JRType JNodeContext::jst_stringify_value(const JNode& jn) {
+JRType JNdParser::jst_stringify_value(const JNode& jn) {
   JRType ret = JST_STRINGIFY_OK;
   switch (jn.jst_node_type_get()) {
     case JST_NULL:
@@ -639,7 +639,7 @@ JRType JNodeContext::jst_stringify_value(const JNode& jn) {
   return ret;
 }
 
-JRType JNodeContext::jst_stringify(const JNode& jn, char** json_str, size_t& len) {
+JRType JNdParser::jst_stringify(const JNode& jn, char** json_str, size_t& len) {
   JRType ret = JST_STRINGIFY_OK;
   JST_DEBUG(json_str != nullptr);
   JST_DEBUG(this->top == 0);

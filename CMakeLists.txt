@@ -1,10 +1,16 @@
-cmake_minimum_required (VERSION 3.15)
-project (JSON_TOY)
+# 设置CMake的最低版本要求
+cmake_minimum_required(VERSION 3.0)
+project(MyProject)
 
-# if (CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
-#     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ansi -pedantic -Wall")
-# endif()
+set(CMAKE_CXX_STANDARD 14)
 
-add_library(json_toy json_toy.cc json_toy_node.cc json_toy_basic.cc json_toy_enum.cc)
-add_executable(json_toy_test test.cc)
-target_link_libraries(json_toy_test json_toy)
+include_directories(inc)
+
+file(GLOB SRC_FILES "src/*.cc")
+file(GLOB TEST_FILES "test/*.cc")
+
+add_library(TJsonLib ${SRC_FILES})
+
+add_executable(tjson_test ${TEST_FILES})
+
+target_link_libraries(tjson_test TJsonLib)

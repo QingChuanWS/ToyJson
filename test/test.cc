@@ -6,8 +6,8 @@
 #include <iostream>
 #include <limits>
 
-#include "json_toy.h"
-#include "jst_vector.h"
+#include "inc/json_toy.h"
+#include "inc/jst_vector.h"
 
 namespace jst {
 static int main_ret = 0;
@@ -106,19 +106,19 @@ static int test_pass = 0;
   } while (0)
 
 static void test_parse_null() {
-  JNodeContext jc(" null   ");
+  JNdParser jc(" null   ");
   EXPECT_EQ_RET(JST_PARSE_OK, jc.jst_parser());
   EXPECT_EQ_TYPE(JST_NULL, jc.root.jst_node_type_get());
 }
 
 static void test_parse_bool_true() {
-  JNodeContext jc(" true   ");
+  JNdParser jc(" true   ");
   EXPECT_EQ_RET(JST_PARSE_OK, jc.jst_parser());
   EXPECT_EQ_TYPE(JST_TRUE, jc.root.jst_node_type_get());
 }
 
 static void test_parse_bool_false() {
-  JNodeContext jc(" false   ");
+  JNdParser jc(" false   ");
   EXPECT_EQ_RET(JST_PARSE_OK, jc.jst_parser());
   EXPECT_EQ_TYPE(JST_FALSE, jc.root.jst_node_type_get());
 }
@@ -326,7 +326,7 @@ static void test_parse_invalid_unicode_surrogate() {
 }
 
 static void test_parser_array_1() {
-  JNodeContext c("[ null , false , true , 123 , \"abc\" ]");
+  JNdParser c("[ null , false , true , 123 , \"abc\" ]");
   EXPECT_EQ_RET(JST_PARSE_OK, c.jst_parser());
   EXPECT_EQ_TYPE(JST_ARR, c.root.jst_node_type_get());
   Array arr;
@@ -339,7 +339,7 @@ static void test_parser_array_1() {
 }
 
 static void test_parser_array_2() {
-  JNodeContext c("[ [ ] , [ 0 ] , [ 0 , 1 ] , [ 0 , 1 , 2 ] ]");
+  JNdParser c("[ [ ] , [ 0 ] , [ 0 , 1 ] , [ 0 , 1 , 2 ] ]");
   EXPECT_EQ_INT(JST_PARSE_OK, c.jst_parser());
   EXPECT_EQ_INT(JST_ARR, c.root.jst_node_type_get());
   Array arr;
@@ -389,7 +389,7 @@ static void test_parse_array() {
 #define TEST_OBJ_KEY(str, key) EXPECT_EQ_STRING(str, key.c_str(), key.size());
 
 static void test_parse_object() {
-  JNodeContext c(
+  JNdParser c(
       " { "
       "\"n\" : null , "
       "\"f\" : false , "
@@ -582,7 +582,7 @@ static void test_equal() {
 }
 
 static void test_copy() {
-  JNodeContext jc("{\"t\":true,\"f\":false,\"n\":null,\"d\":1.5,\"a\":[1,2,3]}");
+  JNdParser jc("{\"t\":true,\"f\":false,\"n\":null,\"d\":1.5,\"a\":[1,2,3]}");
   JNode jn_1, jn_2;
   jc.jst_parser(&jn_1);
   jn_2 = jn_1;
@@ -591,7 +591,7 @@ static void test_copy() {
 
 static void test_move() {
   JNode jn_1, jn_2, jn_3;
-  JNodeContext jc("{\"t\":true,\"f\":false,\"n\":null,\"d\":1.5,\"a\":[1,2,3]}");
+  JNdParser jc("{\"t\":true,\"f\":false,\"n\":null,\"d\":1.5,\"a\":[1,2,3]}");
   jc.jst_parser(&jn_1);
   jn_2 = jn_1;
   jn_3 = std::move(jn_2);

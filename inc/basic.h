@@ -7,14 +7,13 @@
 #include <memory>
 #include <string>
 
-#include "json_toy_enum.h"
+#include "enum.h"
 #include "jst_vector.h"
 
 namespace jst {
 
 class JNode;
 using jst::utils::jst_vector;
-using std::shared_ptr;
 
 struct NumberExp {
   bool is_have;

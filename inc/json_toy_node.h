@@ -3,8 +3,8 @@
 
 #include <memory>
 
-#include "json_toy_basic.h"
-#include "json_toy_enum.h"
+#include "basic.h"
+#include "enum.h"
 
 namespace jst {
 using std::shared_ptr;

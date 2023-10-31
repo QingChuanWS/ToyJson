@@ -5,22 +5,22 @@
 #include <string>
 #include <vector>
 
-#include "json_toy_basic.h"
-#include "json_toy_enum.h"
+#include "basic.h"
+#include "enum.h"
 #include "json_toy_node.h"
 
 namespace jst {
-class JNodeContext {
+class JNdParser {
  public:
-  JNodeContext() : str(""), root(), top(0), stack(nullptr), size(0), str_index(0) {}
-  JNodeContext(const std::string& j_str)
+  JNdParser() : str(""), root(), top(0), stack(nullptr), size(0), str_index(0) {}
+  JNdParser(const std::string& j_str)
       : str(j_str), root(), top(0), stack(nullptr), size(0), str_index(0) {}
 
-  JNodeContext(const JNodeContext& context);
-  JNodeContext& operator=(const JNodeContext& context);
-  JNodeContext(JNodeContext&& context);
-  JNodeContext& operator=(JNodeContext&& context);
-  ~JNodeContext();
+  JNdParser(const JNdParser& context);
+  JNdParser& operator=(const JNdParser& context);
+  JNdParser(JNdParser&& context);
+  JNdParser& operator=(JNdParser&& context);
+  ~JNdParser();
 
   void reset(const std::string& j_str);
 

@@ -8,12 +8,12 @@
 #include <limits>
 #include <stack>
 
-#include "json_toy_basic.h"
+#include "basic.h"
 
 namespace jst {
-template <typename jnd_type>
-static jnd_type& jst_node_data_mem_get(JNodeData& data) {
-  return dynamic_cast<jnd_type&>(data);
+template <typename JND_Type>
+static JND_Type& jst_node_data_mem_get(JNodeData& data) {
+  return dynamic_cast<JND_Type&>(data);
 }
 
 static shared_ptr<JNodeData> jst_node_data_copy(JType type, shared_ptr<JNodeData> jnd) {

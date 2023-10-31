@@ -1,4 +1,4 @@
-#include "json_toy_basic.h"
+#include "basic.h"
 
 #include <assert.h>
 
