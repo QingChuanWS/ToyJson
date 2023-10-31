@@ -46,7 +46,7 @@ class JParser {
   JRetType jst_val_parser_object_member(JOjectMem& objm);
   JRetType jst_val_parser_object(JNode& node);
 
-  JRetType jst_ws_parser(jst_ws_state state, JType t = JST_NULL);
+  JRetType jst_ws_parser(jst_ws_state state, JNType t = JST_NULL);
   JRetType jst_stringify_value(const JNode& jn);
   void jst_stringify_string(const JNode& jn);
 

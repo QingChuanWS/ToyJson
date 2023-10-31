@@ -16,7 +16,7 @@ static JND_Type& jst_node_data_mem_get(JData& data) {
   return dynamic_cast<JND_Type&>(data);
 }
 
-static shared_ptr<JData> jst_node_data_copy(JType type, shared_ptr<JData> jnd) {
+static shared_ptr<JData> jst_node_data_copy(JNType type, shared_ptr<JData> jnd) {
   switch (type) {
     case JST_STR:
       return std::make_shared<JString>(JString(jst_node_data_mem_get<JString>(*jnd)));
@@ -31,7 +31,7 @@ static shared_ptr<JData> jst_node_data_copy(JType type, shared_ptr<JData> jnd) {
   }
 }
 
-JNode::JNode(JType t, const char* str, size_t len) : type(JST_NULL), data(nullptr) {
+JNode::JNode(JNType t, const char* str, size_t len) : type(JST_NULL), data(nullptr) {
   JST_DEBUG(t == JST_NUM || t == JST_STR);
   type = t;
   if (type == JST_NUM) {
@@ -43,18 +43,18 @@ JNode::JNode(JType t, const char* str, size_t len) : type(JST_NULL), data(nullpt
     jst_node_parser_str(str, len);
 }
 
-JNode::JNode(JType t, double num) : type(JST_NULL), data(nullptr) {
+JNode::JNode(JNType t, double num) : type(JST_NULL), data(nullptr) {
   JST_DEBUG(t == JST_NUM);
   type = t;
   this->data = std::make_shared<JNumber>(JNumber(num));
 }
 
-JNode::JNode(JType t, JArray& arr) : type(JST_ARR), data(nullptr) {
+JNode::JNode(JNType t, JArray& arr) : type(JST_ARR), data(nullptr) {
   JST_DEBUG(t == JST_ARR);
   this->data = std::make_shared<JArray>(JArray(arr));
 }
 
-JNode::JNode(JType t, JObject& obj) : type(JST_OBJ), data(nullptr) {
+JNode::JNode(JNType t, JObject& obj) : type(JST_OBJ), data(nullptr) {
   JST_DEBUG(t == JST_ARR);
   this->data = std::make_shared<JObject>(JObject(obj));
 }
@@ -170,7 +170,10 @@ size_t JNode::jst_node_data_length_get() const {
 }
 
 JRetType JNode::jst_node_parser_num(const std::string& str) {
-  JST_CONDATION_STATE(str[0] == '0' && str.size() > 1, (*this), JST_PARSE_SINGULAR);
+  if (str[0] == '0' && str.size() > 1) {
+    this->reset();
+    return JST_PARSE_SINGULAR;
+  }
 
   JRetType ret = JST_PARSE_OK;
   NumberExp exp_state;
@@ -182,12 +185,16 @@ JRetType JNode::jst_node_parser_num(const std::string& str) {
   while (index < str.size()) {
     if (str[index] == ' ') break;
     if (std::isdigit(str[index])) {
-      JST_CONDATION_STATE(
-          exp_state.is_have && point_state.is_have && exp_state.exp_index < point_state.point_index,
-          (*this), JST_PARSE_INVALID_VALUE);
+      if (exp_state.is_have && point_state.is_have &&
+          exp_state.exp_index < point_state.point_index) {
+        this->reset();
+        return JST_PARSE_INVALID_VALUE;
+      }
     } else if (str[index] == 'E' || str[index] == 'e') {
-      JST_CONDATION_STATE(exp_state.is_have || index + 1 >= str.size(), (*this),
-                          JST_PARSE_INVALID_VALUE);
+      if (exp_state.is_have || index + 1 >= str.size()) {
+        this->reset();
+        return JST_PARSE_INVALID_VALUE;
+      }
       exp_state.is_have = true;
       if (str[index + 1] == '+' || str[index + 1] == '-') {
         exp_state.exp_index = index + 2;
@@ -199,8 +206,10 @@ JRetType JNode::jst_node_parser_num(const std::string& str) {
         break;
       }
     } else if (str[index] == '.') {
-      JST_CONDATION_STATE(point_state.is_have || index + 1 >= str.size(), (*this),
-                          JST_PARSE_INVALID_VALUE);
+      if (point_state.is_have || index + 1 >= str.size()) {
+        this->reset();
+        return JST_PARSE_INVALID_VALUE;
+      }
       point_state.is_have = true;
       point_state.point_index = index;
     } else {
@@ -209,13 +218,18 @@ JRetType JNode::jst_node_parser_num(const std::string& str) {
     }
     index++;
   }
-
-  JST_CONDATION_STATE(ret != JST_PARSE_OK, (*this), ret);
+  if (ret != JST_PARSE_OK) {
+    this->reset();
+    return ret;
+  }
   std::string n_str = str.substr(0, index);
   double n = std::strtod(n_str.c_str(), NULL);
-  JST_CONDATION_STATE(n == HUGE_VAL || n == -HUGE_VAL, (*this), JST_PARSE_NUMBER_TOO_BIG)
-  this->data = std::make_shared<JNumber>(JNumber(n));
 
+  if (n == HUGE_VAL || n == -HUGE_VAL) {
+    this->reset();
+    return JST_PARSE_NUMBER_TOO_BIG;
+  }
+  this->data = std::make_shared<JNumber>(JNumber(n));
   return ret;
 }
 
@@ -224,7 +238,7 @@ JRetType JNode::jst_node_parser_str(const char* str, size_t len) {
   return JST_PARSE_OK;
 }
 
-JRetType JNode::jst_node_data_set(JType t, const char* str, const size_t len) {
+JRetType JNode::jst_node_data_set(JNType t, const char* str, const size_t len) {
   JST_DEBUG(t != JST_ARR);
   JRetType ret = JST_PARSE_OK;
   type = t;
@@ -238,7 +252,7 @@ JRetType JNode::jst_node_data_set(JType t, const char* str, const size_t len) {
   return ret;
 }
 
-JRetType JNode::jst_node_data_set(JType t, JString&& s) {
+JRetType JNode::jst_node_data_set(JNType t, JString&& s) {
   JST_DEBUG(t == JST_STR);
   JRetType ret = JST_PARSE_OK;
   type = t;
@@ -246,21 +260,21 @@ JRetType JNode::jst_node_data_set(JType t, JString&& s) {
   return ret;
 }
 
-JRetType JNode::jst_node_data_set(JType t, JArray&& arr) {
+JRetType JNode::jst_node_data_set(JNType t, JArray&& arr) {
   JST_DEBUG(t == JST_ARR);
   type = t;
   this->data = std::make_shared<JArray>(JArray(arr));
   return JST_PARSE_OK;
 }
 
-JRetType JNode::jst_node_data_set(JType t, JObject&& obj) {
+JRetType JNode::jst_node_data_set(JNType t, JObject&& obj) {
   JST_DEBUG(t == JST_OBJ);
   type = t;
   this->data = std::make_shared<JObject>(JObject(obj));
   return JST_PARSE_OK;
 }
 
-JRetType JNode::jst_node_data_set(JType t, double num) {
+JRetType JNode::jst_node_data_set(JNType t, double num) {
   JST_DEBUG(t == JST_NUM);
   type = t;
   this->data = std::make_shared<JNumber>(JNumber(num));

@@ -10,68 +10,76 @@
 #include <stack>
 #include <string>
 
+#include "basic.h"
 #include "enum.h"
 
 namespace jst {
-JParser::JParser(const JParser& context)
-    : str(context.str), str_index(context.str_index), root(context.root) {
-  if (context.stack == nullptr) {
+
+JParser::JParser(const JParser& parser)
+    : str(parser.str), str_index(parser.str_index), root(parser.root) {
+  if (parser.stack == nullptr) {
     stack = nullptr, size = 0, top = 0;
     return;
   }
-  stack = (char*)malloc(context.size * sizeof(char));
-  size = context.size;
+  stack = (char*)malloc(parser.size * sizeof(char));
+  size = parser.size;
   memset(this->stack, 0, this->size);
-  top = context.top;
-  std::memcpy(stack, context.stack, size);
+  top = parser.top;
+  std::memcpy(stack, parser.stack, size);
 }
 
-JParser& JParser::operator=(const JParser& context) {
-  this->str = context.str;
-  this->root = context.root;
-  this->str_index = context.str_index;
+JParser& JParser::operator=(const JParser& parser) {
+  this->str = parser.str;
+  this->root = parser.root;
+  this->str_index = parser.str_index;
 
-  if (this->stack != nullptr) free(this->stack);
-  this->stack = (char*)malloc(context.size * sizeof(char));
-  this->size = context.size;
+  if (this->stack != nullptr) {
+    free(this->stack);
+  }
+  this->stack = (char*)malloc(parser.size * sizeof(char));
+  this->size = parser.size;
   memset(this->stack, 0, this->size);
-  this->top = context.top;
-  std::memcpy(stack, context.stack, size);
+  this->top = parser.top;
+  std::memcpy(stack, parser.stack, size);
   return *this;
 }
 
-JParser::JParser(JParser&& context) : str(std::move(context.str)), root(std::move(context.root)) {
-  this->stack = context.stack;
-  this->size = context.size;
-  this->top = context.top;
-  this->str_index = context.str_index;
+JParser::JParser(JParser&& parser) : str(std::move(parser.str)), root(std::move(parser.root)) {
+  this->stack = parser.stack;
+  this->size = parser.size;
+  this->top = parser.top;
+  this->str_index = parser.str_index;
 
-  context.stack = nullptr;
-  context.size = 0;
-  context.top = 0;
-  context.str_index = 0;
+  parser.stack = nullptr;
+  parser.size = 0;
+  parser.top = 0;
+  parser.str_index = 0;
 }
 
-JParser& JParser::operator=(JParser&& context) {
-  str = std::move(context.str);
-  root = std::move(context.root);
+JParser& JParser::operator=(JParser&& parser) {
+  str = std::move(parser.str);
+  root = std::move(parser.root);
 
-  if (this->stack != nullptr) free(this->stack);
-  this->stack = context.stack;
-  this->size = context.size;
-  this->top = context.top;
-  this->str_index = context.str_index;
+  if (this->stack != nullptr) {
+    free(this->stack);
+  }
+  this->stack = parser.stack;
+  this->size = parser.size;
+  this->top = parser.top;
+  this->str_index = parser.str_index;
 
-  context.stack = nullptr;
-  context.size = 0;
-  context.top = 0;
-  context.str_index = 0;
+  parser.stack = nullptr;
+  parser.size = 0;
+  parser.top = 0;
+  parser.str_index = 0;
   return *this;
 }
 
 JParser::~JParser() {
   JST_DEBUG(top == 0);
-  if (this->stack != nullptr) free(stack);
+  if (this->stack != nullptr) {
+    free(stack);
+  }
   this->stack = 0;
   this->str_index = 0;
   this->size = 0;
@@ -111,16 +119,12 @@ void JParser::reset(const std::string& j_str) {
 }
 
 JRetType JParser::jst_parser(JNode* node) {
-  if (node == nullptr)
-    return jst_val_parser(root);
-  else
-    return jst_val_parser(*node);
+  return node == nullptr ? jst_val_parser(root) : jst_val_parser(*node);
 }
 
-JRetType JParser::jst_ws_parser(jst_ws_state state, JType t) {
+JRetType JParser::jst_ws_parser(jst_ws_state state, JNType t) {
   int ws_count = 0;
   int index = this->str_index;
-  JRetType ret = JST_PARSE_OK;
   for (int i = index; i < this->str.size(); i++) {
     if (this->str[i] == ' ' || this->str[i] == '\n' || this->str[i] == '\t' ||
         this->str[i] == '\r') {
@@ -132,45 +136,50 @@ JRetType JParser::jst_ws_parser(jst_ws_state state, JType t) {
   this->str_index += ws_count;
 
   if (state == JST_WS_BEFORE && this->str_index == this->str.size()) {
-    ret = JST_PARSE_EXCEPT_VALUE;
-  } else if (state == JST_WS_AFTER && this->str_index != this->str.size()) {
+    return JST_PARSE_EXCEPT_VALUE;
+  }
+  if (state == JST_WS_AFTER && this->str_index != this->str.size()) {
     if (t == JST_ARR) {
       if (this->str[this->str_index] != ',' && this->str[this->str_index] != ']')
-        ret = JST_PARSE_MISS_COMMA_OR_SQUARE_BRACKET;
+        return JST_PARSE_MISS_COMMA_OR_SQUARE_BRACKET;
     } else if (t == JST_OBJ) {
       if (this->str[this->str_index] != ',' && this->str[this->str_index] != ':' &&
           this->str[this->str_index] != '}')
-        ret = JST_PARSE_MISS_COMMA_OR_CURLY_BRACKET;
+        return JST_PARSE_MISS_COMMA_OR_CURLY_BRACKET;
     } else
-      ret = JST_PARSE_SINGULAR;
+      return JST_PARSE_SINGULAR;
   }
-  return ret;
+  return JST_PARSE_OK;
 }
 
 JRetType JParser::jst_val_parser_symbol(JNode& node) {
-  JType t;
-  int index = this->str_index;
+  JNType t;
+  auto index = this->str_index;
+  
   if (str[index] == 't') {
-    JST_CONDATION_STATE(
-        str.size() < 4 || str[index + 1] != 'r' || str[index + 2] != 'u' || str[index + 3] != 'e',
-        node, JST_PARSE_INVALID_VALUE);
+    if (str.size() < 4 || str[index + 1] != 'r' || str[index + 2] != 'u' || str[index + 3] != 'e') {
+      node.reset();
+      return JST_PARSE_INVALID_VALUE;
+    }
     t = JST_TRUE;
     this->str_index += 4;
   } else if (str[index] == 'f') {
-    JST_CONDATION_STATE(str.size() < 5 || str[index + 1] != 'a' || str[index + 2] != 'l' ||
-                            str[index + 3] != 's' || str[index + 4] != 'e',
-                        node, JST_PARSE_INVALID_VALUE);
+    if (str.size() < 5 || str[index + 1] != 'a' || str[index + 2] != 'l' || str[index + 3] != 's' ||
+        str[index + 4] != 'e') {
+      node.reset();
+      return JST_PARSE_INVALID_VALUE;
+    }
     t = JST_FALSE;
     this->str_index += 5;
   } else if (str[index] == 'n') {
-    JST_CONDATION_STATE(
-        str.size() < 4 || str[index + 1] != 'u' || str[index + 2] != 'l' || str[index + 3] != 'l',
-        node, JST_PARSE_INVALID_VALUE);
+    if (str.size() < 4 || str[index + 1] != 'u' || str[index + 2] != 'l' || str[index + 3] != 'l') {
+      node.reset();
+      return JST_PARSE_INVALID_VALUE;
+    }
     t = JST_NULL;
     this->str_index += 4;
   }
   node.jst_node_data_set(t);
-
   return JST_PARSE_OK;
 }
 
@@ -416,13 +425,14 @@ JRetType JParser::jst_val_parser_object_member(JOjectMem& objm) {
     ret = JST_PARSE_MISS_COLON;
     return ret;
   }
-
-  if ((ret = jst_ws_parser(JST_WS_BEFORE, JST_OBJ)) != JST_PARSE_OK) return ret;
-
-  if ((ret = jst_val_parser(*jn, true)) != JST_PARSE_OK) return ret;
+  if ((ret = jst_ws_parser(JST_WS_BEFORE, JST_OBJ)) != JST_PARSE_OK) {
+    return ret;
+  }
+  if ((ret = jst_val_parser(*jn, true)) != JST_PARSE_OK) {
+    return ret;
+  }
 
   objm = std::move(JOjectMem(std::move(*s), std::move(*jn)));
-
   return ret;
 }
 
@@ -445,11 +455,15 @@ JRetType JParser::jst_val_parser_object(JNode& node) {
       if (size != 0) ret = JST_PARSE_MISS_KEY;
       break;
     }
-    if ((ret = jst_ws_parser(JST_WS_BEFORE)) != JST_PARSE_OK) break;
-
-    if ((ret = jst_val_parser_object_member(*objm)) != JST_PARSE_OK) break;
-
-    if ((ret = jst_ws_parser(JST_WS_AFTER, JST_OBJ)) != JST_PARSE_OK) break;
+    if ((ret = jst_ws_parser(JST_WS_BEFORE)) != JST_PARSE_OK) {
+      break;
+    }
+    if ((ret = jst_val_parser_object_member(*objm)) != JST_PARSE_OK) {
+      break;
+    }
+    if ((ret = jst_ws_parser(JST_WS_AFTER, JST_OBJ)) != JST_PARSE_OK) {
+      break;
+    }
 
     JOjectMem* stack_node = (JOjectMem*)this->stack_push(sizeof(JOjectMem));
     memset(stack_node, 0, sizeof(JOjectMem));
@@ -641,8 +655,12 @@ JRetType JParser::jst_stringify(const JNode& jn, char** json_str, size_t& len) {
   JRetType ret = JST_STRINGIFY_OK;
   JST_DEBUG(json_str != nullptr);
   JST_DEBUG(this->top == 0);
-  if ((ret = jst_stringify_value(jn)) != JST_STRINGIFY_OK) return ret;
-  if (this->top) len = this->top;
+  if ((ret = jst_stringify_value(jn)) != JST_STRINGIFY_OK) {
+    return ret;
+  }
+  if (this->top) {
+    len = this->top;
+  }
   *json_str = (char*)this->stack_pop(this->top);
   return ret;
 }

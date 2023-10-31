@@ -2,7 +2,7 @@
  * @Author: QingChuanWS bingshan45@163.com
  * @Date: 2023-01-15 01:41:20
  * @LastEditors: QingChuanWS bingshan45@163.com
- * @LastEditTime: 2023-10-31 21:28:53
+ * @LastEditTime: 2023-10-31 21:56:39
  * @FilePath: /json_toy/inc/enum.h
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置:
  * https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
@@ -13,13 +13,6 @@
 #include <string>
 
 namespace jst {
-
-#define JST_CONDATION_STATE(condition, node, ret) \
-  if (condition) {                                \
-    JNode& p = node;                              \
-    node.reset();                                 \
-    return ret;                                   \
-  }
 
 #define JST_FUNCTION_STATE(expect, func, node) \
   do {                                         \
@@ -46,7 +39,7 @@ namespace jst {
     return ret;                                       \
   }
 
-typedef enum { JST_NULL = 0, JST_TRUE, JST_FALSE, JST_NUM, JST_STR, JST_ARR, JST_OBJ } JType;
+typedef enum { JST_NULL = 0, JST_TRUE, JST_FALSE, JST_NUM, JST_STR, JST_ARR, JST_OBJ } JNType;
 
 extern const char* jst_node_type_name[7];
 
