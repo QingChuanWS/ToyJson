@@ -11,13 +11,12 @@ using std::shared_ptr;
 
 class JNode {
  public:
-  JNode() : type(JST_NULL), data(nullptr){};
+  JNode() = default;
   JNode(JNType t, const char* str = nullptr, size_t len = 0);
   JNode(JNType t, double num);
   JNode(JNType t, JArray& arr);
   JNode(JNType t, JObject& obj);
 
-  void reset();
   void jst_node_data_reset(const bool data);
   void jst_node_data_reset(const JString& data);
   void jst_node_data_reset(const double data);
@@ -42,7 +41,7 @@ class JNode {
   JRetType jst_node_data_set(JNType t, JObject&& obj);
 
   void jst_node_data_get(std::string& node_str) const;
-  void jst_node_data_get(char** node_str, size_t& len) const;
+  void jst_node_data_get(const char** node_str, size_t& len) const;
   void jst_node_data_get(double& node_num) const;
   void jst_node_data_get(bool& node_bool) const;
   void jst_node_data_get(JArray& arr) const;
@@ -54,8 +53,8 @@ class JNode {
   JRetType jst_node_parser_num(const std::string& str);
   JRetType jst_node_parser_str(const char* str, size_t len);
 
-  shared_ptr<JData> data;
-  JNType type;
+  shared_ptr<JData> data = nullptr;
+  JNType type = JST_NULL;
 };
 
 }  // namespace jst

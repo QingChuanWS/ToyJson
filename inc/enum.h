@@ -2,7 +2,7 @@
  * @Author: QingChuanWS bingshan45@163.com
  * @Date: 2023-01-15 01:41:20
  * @LastEditors: QingChuanWS bingshan45@163.com
- * @LastEditTime: 2023-10-31 21:56:39
+ * @LastEditTime: 2023-11-02 23:21:58
  * @FilePath: /json_toy/inc/enum.h
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置:
  * https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
@@ -16,9 +16,8 @@ namespace jst {
 
 #define JST_FUNCTION_STATE(expect, func, node) \
   do {                                         \
-    JRetType ret = func;                         \
+    JRetType ret = func;                       \
     if (ret != expect) {                       \
-      node.reset();                            \
       return ret;                              \
     }                                          \
   } while (0);

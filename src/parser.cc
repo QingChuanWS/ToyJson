@@ -135,52 +135,59 @@ JRetType JParser::jst_ws_parser(jst_ws_state state, JNType t) {
   }
   this->str_index += ws_count;
 
+  auto ret = JST_PARSE_OK;
   if (state == JST_WS_BEFORE && this->str_index == this->str.size()) {
-    return JST_PARSE_EXCEPT_VALUE;
+    ret = JST_PARSE_EXCEPT_VALUE;
   }
   if (state == JST_WS_AFTER && this->str_index != this->str.size()) {
     if (t == JST_ARR) {
       if (this->str[this->str_index] != ',' && this->str[this->str_index] != ']')
-        return JST_PARSE_MISS_COMMA_OR_SQUARE_BRACKET;
+        ret = JST_PARSE_MISS_COMMA_OR_SQUARE_BRACKET;
     } else if (t == JST_OBJ) {
       if (this->str[this->str_index] != ',' && this->str[this->str_index] != ':' &&
           this->str[this->str_index] != '}')
-        return JST_PARSE_MISS_COMMA_OR_CURLY_BRACKET;
-    } else
-      return JST_PARSE_SINGULAR;
+        ret = JST_PARSE_MISS_COMMA_OR_CURLY_BRACKET;
+    } else {
+      ret = JST_PARSE_SINGULAR;
+    }
   }
-  return JST_PARSE_OK;
+  return ret;
 }
 
 JRetType JParser::jst_val_parser_symbol(JNode& node) {
   JNType t;
   auto index = this->str_index;
-  
+  auto ret = JST_PARSE_OK;
+
   if (str[index] == 't') {
     if (str.size() < 4 || str[index + 1] != 'r' || str[index + 2] != 'u' || str[index + 3] != 'e') {
-      node.reset();
-      return JST_PARSE_INVALID_VALUE;
+      t = JST_NULL;
+      ret = JST_PARSE_INVALID_VALUE;
+      goto RETURN;
     }
     t = JST_TRUE;
     this->str_index += 4;
   } else if (str[index] == 'f') {
     if (str.size() < 5 || str[index + 1] != 'a' || str[index + 2] != 'l' || str[index + 3] != 's' ||
         str[index + 4] != 'e') {
-      node.reset();
-      return JST_PARSE_INVALID_VALUE;
+      t = JST_NULL;
+      ret = JST_PARSE_INVALID_VALUE;
+      goto RETURN;
     }
     t = JST_FALSE;
     this->str_index += 5;
   } else if (str[index] == 'n') {
     if (str.size() < 4 || str[index + 1] != 'u' || str[index + 2] != 'l' || str[index + 3] != 'l') {
-      node.reset();
-      return JST_PARSE_INVALID_VALUE;
+      t = JST_NULL;
+      ret = JST_PARSE_INVALID_VALUE;
+      goto RETURN;
     }
     t = JST_NULL;
     this->str_index += 4;
   }
+RETURN:
   node.jst_node_data_set(t);
-  return JST_PARSE_OK;
+  return ret;
 }
 
 JRetType JParser::jst_val_parser_number(JNode& node) {
@@ -342,11 +349,10 @@ RET:
 
 JRetType JParser::jst_val_parser_string(JNode& node) {
   std::unique_ptr<JString> s = std::make_unique<JString>(JString());
-  JRetType ret = jst_val_parser_string_base(*s);
-  if (ret != JST_PARSE_OK)
-    node.reset();
-  else
+  auto ret = jst_val_parser_string_base(*s);
+  if (ret == JST_PARSE_OK) {
     ret = node.jst_node_data_set(JST_STR, std::move(*s));
+  }
   return ret;
 }
 
@@ -354,7 +360,7 @@ JRetType JParser::jst_val_parser_array(JNode& node) {
   JST_DEBUG(this->str[this->str_index++] == '[');
   JST_FUNCTION_STATE(JST_PARSE_OK, jst_ws_parser(JST_WS_BEFORE), node);
 
-  JRetType ret = JST_PARSE_OK;
+  auto ret = JST_PARSE_OK;
   if (this->str[this->str_index] == ']') {
     node.jst_node_data_set(JST_ARR, JArray());
     this->str_index++;
@@ -369,19 +375,20 @@ JRetType JParser::jst_val_parser_array(JNode& node) {
       if (size != 0) ret = JST_PARSE_MISS_COMMA_OR_SQUARE_BRACKET;
       break;
     }
-    if ((ret = jst_ws_parser(JST_WS_BEFORE)) != JST_PARSE_OK) break;
-
+    if ((ret = jst_ws_parser(JST_WS_BEFORE)) != JST_PARSE_OK) {
+      break;
+    }
     ret = jst_val_parser(*jn, true);
     if (ret != JST_PARSE_OK) {
       break;
     }
-
-    if ((ret = jst_ws_parser(JST_WS_AFTER, JST_ARR)) != JST_PARSE_OK) break;
+    if ((ret = jst_ws_parser(JST_WS_AFTER, JST_ARR)) != JST_PARSE_OK) {
+      break;
+    }
 
     auto stack_node = (JNode*)this->stack_push(sizeof(JNode));
     *stack_node = std::move(*jn);
     size++;
-    jn->reset();
 
     if (this->str[this->str_index] == ',') {
       this->str_index++;
@@ -399,14 +406,11 @@ JRetType JParser::jst_val_parser_array(JNode& node) {
     }
   }
   if (ret != JST_PARSE_OK) {
-    if (size != 0) {
-      JNode* arr_head = (JNode*)this->stack_pop(size * sizeof(JNode));
-      for (int i = 0; i < size; i++) arr_head[i].reset();
-    }
+    node.jst_node_data_set(JST_NULL);
     this->top = head;
-    node.reset();
-  } else
+  } else {
     JST_FUNCTION_STATE(JST_PARSE_OK, jst_ws_parser(JST_WS_AFTER, JST_ARR), node);
+  }
   return ret;
 }
 
@@ -415,11 +419,17 @@ JRetType JParser::jst_val_parser_object_member(JOjectMem& objm) {
   std::unique_ptr<JString> s = std::make_unique<JString>(JString());
   std::unique_ptr<JNode> jn = std::make_unique<JNode>(JNode());
 
-  if (this->str[this->str_index] != '\"') return JST_PARSE_MISS_KEY;
+  if (this->str[this->str_index] != '\"') {
+    return JST_PARSE_MISS_KEY;
+  }
   ret = jst_val_parser_string_base(*s);
-  if (ret != JST_PARSE_OK) return ret;
+  if (ret != JST_PARSE_OK) {
+    return ret;
+  }
 
-  if ((ret = jst_ws_parser(JST_WS_AFTER, JST_OBJ)) != JST_PARSE_OK) return ret;
+  if ((ret = jst_ws_parser(JST_WS_AFTER, JST_OBJ)) != JST_PARSE_OK) {
+    return ret;
+  }
 
   if (this->str[this->str_index++] != ':') {
     ret = JST_PARSE_MISS_COLON;
@@ -487,7 +497,11 @@ JRetType JParser::jst_val_parser_object(JNode& node) {
   }
 
   if (ret == JST_PARSE_OK) {
-    JST_FUNCTION_STATE(JST_PARSE_OK, jst_ws_parser(JST_WS_AFTER, JST_OBJ), node);
+    auto ret = jst_ws_parser(JST_WS_AFTER, JST_OBJ);
+    if (ret != JST_PARSE_OK) {
+      node.jst_node_data_set(JST_NULL);
+      return ret;
+    }
   } else {
     if (size != 0) {
       JOjectMem* objm_head = (JOjectMem*)this->stack_pop(size * sizeof(JOjectMem));
@@ -495,13 +509,18 @@ JRetType JParser::jst_val_parser_object(JNode& node) {
         std::unique_ptr<JOjectMem> objm = std::make_unique<JOjectMem>(std::move(objm_head[i]));
     }
     this->top = head;
-    node.reset();
   }
   return ret;
 }
 
 JRetType JParser::jst_val_parser(JNode& node, bool is_local) {
-  if (!is_local) JST_FUNCTION_STATE(JST_PARSE_OK, jst_ws_parser(JST_WS_BEFORE), root);
+  if (!is_local) {
+    auto ret = jst_ws_parser(JST_WS_BEFORE);
+    if (ret != JST_PARSE_OK) {
+      node.jst_node_data_set(JST_NULL);
+      return ret;
+    }
+  }
 
   JRetType ret = JST_PARSE_OK;
   switch (str[this->str_index]) {
@@ -536,9 +555,13 @@ JRetType JParser::jst_val_parser(JNode& node, bool is_local) {
       ret = JST_PARSE_INVALID_VALUE;
   }
 
-  if (!is_local && ret == JST_PARSE_OK)
-    JST_FUNCTION_STATE(JST_PARSE_OK, jst_ws_parser(JST_WS_AFTER, node.get_type()), node);
-
+  if (!is_local && ret == JST_PARSE_OK) {
+    auto ret = jst_ws_parser(JST_WS_AFTER, node.get_type());
+    if (ret != JST_PARSE_OK) {
+      node.jst_node_data_set(JST_NULL);
+      return ret;
+    }
+  }
   return ret;
 }
 
@@ -556,7 +579,7 @@ JRetType JParser::jst_val_parser(JNode& node, bool is_local) {
 
 void JParser::jst_stringify_string(const JNode& jn) {
   JST_DEBUG(jn.get_type() == JST_STR);
-  char* json_str;
+  const char* json_str;
   size_t json_str_len;
   jn.jst_node_data_get(&json_str, json_str_len);
   PUT_C('"');

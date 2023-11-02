@@ -29,17 +29,17 @@ struct NumberPoint {
 
 class JData {
  public:
-  JData() {}
+  JData() = default;
   virtual ~JData(){};
 };
 
 class JString : virtual public JData {
  private:
-  size_t length;
-  char* s;
+  size_t length = 0;
+  char* s = nullptr;
 
  public:
-  explicit JString() : s(nullptr), length(0) {}
+  explicit JString() = default;
   explicit JString(const char* s, size_t len = 0);
 
   JString(const JString& s);
@@ -49,20 +49,23 @@ class JString : virtual public JData {
   ~JString();
 
  public:
-  size_t size() const;
-  char* c_str() const;
-  bool empty() const;
+  const size_t size() const;
+  const char* c_str() const;
+  const bool empty() const;
 
  public:
   friend bool operator==(const JString& str_1, const JString& str_2);
 };
 
 class JNumber : public JData {
+ private:
+  double num = 0.0;
+
  public:
-  JNumber() : num(0.0) {}
+  JNumber() = default;
   friend bool operator==(const JNumber& num_1, const JNumber& num_2);
   explicit JNumber(double n) : num(n){};
-  double num;
+  const double get() const { return num; };
 };
 
 class JArray : public JData {
@@ -108,11 +111,11 @@ class JArray : public JData {
 // object
 class JOjectMem {
  private:
-  JString* key;
-  JNode* value;
+  JString* key = nullptr;
+  JNode* value = nullptr;
 
  public:
-  JOjectMem() : key(), value() {}
+  JOjectMem() = default;
   JOjectMem(const JString& key, const JNode& value);
   JOjectMem(JString&& key, JNode&& value);
 

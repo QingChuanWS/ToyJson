@@ -66,11 +66,11 @@ JString::~JString() {
   this->s = nullptr;
 }
 
-size_t JString::size() const { return length; };
+const size_t JString::size() const { return length; };
 
-char* JString::c_str() const { return s; }
+const char* JString::c_str() const { return s; }
 
-bool JString::empty() const { return s == nullptr || length == 0; }
+const bool JString::empty() const { return s == nullptr || length == 0; }
 
 bool operator==(const JString& str_1, const JString& str_2) {
   return (str_1.length == str_2.length) && memcmp(str_1.c_str(), str_2.c_str(), str_1.size()) == 0;
@@ -212,7 +212,6 @@ size_t JArray::erase(size_t pos, size_t count) {
   JST_DEBUG(pos >= 0 && pos < this->len_);
   if (count == 0) return pos;
   count = std::min(count, this->len_ - pos);
-  for (size_t i = 0; i < count; i++) this->a_[pos + i].reset();
   for (size_t i = pos; i + count < this->len_; i++) this->a_[i] = std::move(this->a_[i + count]);
   this->len_ -= count;
   return pos;
@@ -235,14 +234,10 @@ void JArray::push_back(const JNode& jn) {
 
 void JArray::pop_back() {
   if (this->len_ == 0) return;
-  this->a_[this->len_ - 1].reset();
   this->len_ -= 1;
 }
 
-void JArray::clear() {
-  for (size_t i = 0; i < this->len_; i++) this->a_[i].reset();
-  this->len_ = 0;
-}
+void JArray::clear() { this->len_ = 0; }
 
 void JArray::reserve(size_t new_cap) {
   if (new_cap <= this->cap_) return;
@@ -318,9 +313,7 @@ bool operator==(JOjectMem objm_1, JOjectMem objm_2) {
   return (objm_1.get_key() == objm_2.get_key()) && (objm_1.get_value() == objm_2.get_value());
 }
 
-bool operator!=(const JOjectMem objm_1, const JOjectMem objm_2) {
-  return !(objm_1 == objm_2);
-}
+bool operator!=(const JOjectMem objm_1, const JOjectMem objm_2) { return !(objm_1 == objm_2); }
 
 /*
 object class implemention;
