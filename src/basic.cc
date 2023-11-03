@@ -321,7 +321,7 @@ object class implemention;
 
 #define JST_KEY_NOT_EXIST ((size_t)-1)
 
-size_t JObject::find_index(const JString& ky) {
+size_t JObject::find_index(const JString& ky) const {
   size_t size = this->size();
   for (size_t i = 0; i < size; i++) {
     if (ky == obj_[i].get_key()) return i;
@@ -329,7 +329,7 @@ size_t JObject::find_index(const JString& ky) {
   return JST_KEY_NOT_EXIST;
 }
 
-const JNode* JObject::find_value(const JString& ky) {
+const JNode* JObject::find_value(const JString& ky) const {
   size_t size = this->size();
   size_t i = JST_KEY_NOT_EXIST;
   for (size_t t = 0; t < size; t++) {
@@ -341,18 +341,18 @@ const JNode* JObject::find_value(const JString& ky) {
   return i != JST_KEY_NOT_EXIST ? &obj_[i].get_value() : nullptr;
 }
 
-bool operator==(JObject& obj_1, JObject& obj_2) {
-  if (obj_1.size() != obj_2.size()) return false;
-  size_t size = obj_1.size();
+bool operator==(const JObject& left, const JObject& right) {
+  if (left.size() != right.size()) return false;
+  size_t size = left.size();
   for (int i = 0; i < size; i++) {
     size_t index;
-    if ((index = obj_1.find_index(obj_2[i].get_key())) == JST_KEY_NOT_EXIST ||
-        obj_1[index] != obj_2[i])
+    if ((index = left.find_index(right[i].get_key())) == JST_KEY_NOT_EXIST ||
+        left[index] != right[i])
       return false;
   }
   return true;
 }
 
-bool operator!=(JObject& objm_1, JObject& objm_2) { return !(objm_1 == objm_2); }
+bool operator!=(const JObject& objm_1, const JObject& objm_2) { return !(objm_1 == objm_2); }
 
 }  // namespace jst

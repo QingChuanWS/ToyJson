@@ -31,6 +31,10 @@ class JData {
  public:
   JData() = default;
   virtual ~JData(){};
+  template <typename Type>
+  const Type& as() const {
+    return *dynamic_cast<const Type*>(this);
+  }
 };
 
 class JString : virtual public JData {
@@ -146,8 +150,8 @@ class JObject : public JData {
   const JOjectMem& operator[](int index) const { return this->obj_[index]; }
   JOjectMem& operator[](int index) { return this->obj_[index]; }
 
-  size_t find_index(const JString& key);
-  const JNode* find_value(const JString& key);
+  size_t find_index(const JString& key) const ;
+  const JNode* find_value(const JString& key) const;
   bool empty() const { return obj_.empty(); }
   size_t size() const { return obj_.size(); }
   size_t capacity() const { return obj_.capacity(); }
@@ -168,8 +172,8 @@ class JObject : public JData {
   void shrink_to_fit();
 
  public:
-  friend bool operator==(JObject& obj_1, JObject& obj_2);
-  friend bool operator!=(JObject& objm_1, JObject& objm_2);
+  friend bool operator==(const JObject& obj_1, const JObject& obj_2);
+  friend bool operator!=(const JObject& objm_1, const JObject& objm_2);
 };
 
 }  // namespace jst
