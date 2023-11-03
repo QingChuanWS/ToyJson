@@ -118,8 +118,8 @@ void JParser::reset(const std::string& j_str) {
   this->top = 0;
 }
 
-JRetType JParser::jst_parser(JNode* node) {
-  return node == nullptr ? jst_val_parser(root) : jst_val_parser(*node);
+JRetType JParser::parser(JNode* node) {
+  return node == nullptr ? main_parser(root) : main_parser(*node);
 }
 
 JRetType JParser::jst_ws_parser(jst_ws_state state, JNType t) {
@@ -154,7 +154,7 @@ JRetType JParser::jst_ws_parser(jst_ws_state state, JNType t) {
   return ret;
 }
 
-JRetType JParser::jst_val_parser_symbol(JNode& node) {
+JRetType JParser::parser_symbol(JNode& node) {
   JNType t;
   auto index = this->str_index;
   auto ret = JST_PARSE_OK;
@@ -190,7 +190,7 @@ RETURN:
   return ret;
 }
 
-JRetType JParser::jst_val_parser_number(JNode& node) {
+JRetType JParser::parser_number(JNode& node) {
   JST_DEBUG(std::isdigit(this->str[this->str_index]) || this->str[this->str_index] == '+' ||
             this->str[this->str_index] == '-');
 
@@ -212,7 +212,7 @@ JRetType JParser::jst_val_parser_number(JNode& node) {
   return JST_PARSE_OK;
 }
 
-JRetType JParser::jst_val_parser_str_utf(unsigned hex, std::vector<char>& sp_vec) {
+JRetType JParser::parser_utf_str(unsigned hex, std::vector<char>& sp_vec) {
   if (hex >= 0x0000 && hex <= 0x007F) {
     sp_vec.push_back(hex & 0x00FF);
   } else if (hex >= 0x0080 && hex <= 0x07FF) {
@@ -237,7 +237,7 @@ JRetType JParser::jst_val_parser_str_utf(unsigned hex, std::vector<char>& sp_vec
   ret = ret_type;                             \
   break
 
-inline JRetType JParser::jst_val_parser_str_sp(int& index, std::vector<char>& sp_char) {
+inline JRetType JParser::parser_specifical_str(int& index, std::vector<char>& sp_char) {
   JRetType ret = JST_PARSE_OK;
   switch (this->str[index]) {
     case 'n':
@@ -281,7 +281,7 @@ inline JRetType JParser::jst_val_parser_str_sp(int& index, std::vector<char>& sp
         hex = 0x10000 + (hex - 0xD800) * 0x400 + (low_hex - 0xDC00);
         index += 6;
       }
-      if (JST_PARSE_OK != jst_val_parser_str_utf(hex, sp_char)) {
+      if (JST_PARSE_OK != parser_utf_str(hex, sp_char)) {
         ret = JST_PARSE_INVALID_UNICODE_SURROGATE;
         break;
       }
@@ -294,7 +294,7 @@ inline JRetType JParser::jst_val_parser_str_sp(int& index, std::vector<char>& sp
   return ret;
 }
 
-JRetType JParser::jst_val_parser_string_base(JString& s) {
+JRetType JParser::parser_string_base(JString& s) {
   JST_DEBUG(this->str[this->str_index] == '\"');
   JRetType ret = JST_PARSE_OK;
 
@@ -322,7 +322,7 @@ JRetType JParser::jst_val_parser_string_base(JString& s) {
           goto RET;
         }
         std::vector<char> sp_char;
-        if (JST_PARSE_OK != (ret = jst_val_parser_str_sp(index, sp_char))) {
+        if (JST_PARSE_OK != (ret = parser_specifical_str(index, sp_char))) {
           this->top = head;
           goto RET;
         }
@@ -347,16 +347,16 @@ RET:
   return ret;
 }
 
-JRetType JParser::jst_val_parser_string(JNode& node) {
+JRetType JParser::parser_string(JNode& node) {
   std::unique_ptr<JString> s = std::make_unique<JString>(JString());
-  auto ret = jst_val_parser_string_base(*s);
+  auto ret = parser_string_base(*s);
   if (ret == JST_PARSE_OK) {
     ret = node.jst_node_data_set(JST_STR, std::move(*s));
   }
   return ret;
 }
 
-JRetType JParser::jst_val_parser_array(JNode& node) {
+JRetType JParser::parser_array(JNode& node) {
   JST_DEBUG(this->str[this->str_index++] == '[');
   JST_FUNCTION_STATE(JST_PARSE_OK, jst_ws_parser(JST_WS_BEFORE), node);
 
@@ -378,7 +378,7 @@ JRetType JParser::jst_val_parser_array(JNode& node) {
     if ((ret = jst_ws_parser(JST_WS_BEFORE)) != JST_PARSE_OK) {
       break;
     }
-    ret = jst_val_parser(*jn, true);
+    ret = main_parser(*jn, true);
     if (ret != JST_PARSE_OK) {
       break;
     }
@@ -414,7 +414,7 @@ JRetType JParser::jst_val_parser_array(JNode& node) {
   return ret;
 }
 
-JRetType JParser::jst_val_parser_object_member(JOjectMem& objm) {
+JRetType JParser::parser_object_member(JOjectElement& objm) {
   JRetType ret = JST_PARSE_OK;
   std::unique_ptr<JString> s = std::make_unique<JString>(JString());
   std::unique_ptr<JNode> jn = std::make_unique<JNode>(JNode());
@@ -422,7 +422,7 @@ JRetType JParser::jst_val_parser_object_member(JOjectMem& objm) {
   if (this->str[this->str_index] != '\"') {
     return JST_PARSE_MISS_KEY;
   }
-  ret = jst_val_parser_string_base(*s);
+  ret = parser_string_base(*s);
   if (ret != JST_PARSE_OK) {
     return ret;
   }
@@ -438,15 +438,15 @@ JRetType JParser::jst_val_parser_object_member(JOjectMem& objm) {
   if ((ret = jst_ws_parser(JST_WS_BEFORE, JST_OBJ)) != JST_PARSE_OK) {
     return ret;
   }
-  if ((ret = jst_val_parser(*jn, true)) != JST_PARSE_OK) {
+  if ((ret = main_parser(*jn, true)) != JST_PARSE_OK) {
     return ret;
   }
 
-  objm = std::move(JOjectMem(std::move(*s), std::move(*jn)));
+  objm = std::move(JOjectElement(std::move(*s), std::move(*jn)));
   return ret;
 }
 
-JRetType JParser::jst_val_parser_object(JNode& node) {
+JRetType JParser::parser_object(JNode& node) {
   JST_DEBUG(this->str[this->str_index++] == '{');
   JST_FUNCTION_STATE(JST_PARSE_OK, jst_ws_parser(JST_WS_BEFORE), node);
 
@@ -459,7 +459,7 @@ JRetType JParser::jst_val_parser_object(JNode& node) {
 
   size_t size = 0;
   int head = this->top;
-  std::unique_ptr<JOjectMem> objm = std::make_unique<JOjectMem>(JOjectMem());
+  std::unique_ptr<JOjectElement> objm = std::make_unique<JOjectElement>(JOjectElement());
   for (;;) {
     if (this->str_index == this->str.size()) {
       if (size != 0) ret = JST_PARSE_MISS_KEY;
@@ -468,15 +468,15 @@ JRetType JParser::jst_val_parser_object(JNode& node) {
     if ((ret = jst_ws_parser(JST_WS_BEFORE)) != JST_PARSE_OK) {
       break;
     }
-    if ((ret = jst_val_parser_object_member(*objm)) != JST_PARSE_OK) {
+    if ((ret = parser_object_member(*objm)) != JST_PARSE_OK) {
       break;
     }
     if ((ret = jst_ws_parser(JST_WS_AFTER, JST_OBJ)) != JST_PARSE_OK) {
       break;
     }
 
-    JOjectMem* stack_node = (JOjectMem*)this->stack_push(sizeof(JOjectMem));
-    memset(stack_node, 0, sizeof(JOjectMem));
+    JOjectElement* stack_node = (JOjectElement*)this->stack_push(sizeof(JOjectElement));
+    memset(stack_node, 0, sizeof(JOjectElement));
     *stack_node = std::move(*objm);
     size++;
 
@@ -485,7 +485,7 @@ JRetType JParser::jst_val_parser_object(JNode& node) {
     } else if (this->str[this->str_index] == '}') {
       this->str_index++;
       std::unique_ptr<JObject> obj(new JObject(size));
-      JOjectMem* objm_head = (JOjectMem*)this->stack_pop(size * sizeof(JOjectMem));
+      JOjectElement* objm_head = (JOjectElement*)this->stack_pop(size * sizeof(JOjectElement));
 
       for (int i = 0; i < size; i++) (*obj)[i] = std::move(objm_head[i]);
       node.jst_node_data_set(JST_OBJ, std::move(*obj));
@@ -504,16 +504,16 @@ JRetType JParser::jst_val_parser_object(JNode& node) {
     }
   } else {
     if (size != 0) {
-      JOjectMem* objm_head = (JOjectMem*)this->stack_pop(size * sizeof(JOjectMem));
+      JOjectElement* objm_head = (JOjectElement*)this->stack_pop(size * sizeof(JOjectElement));
       for (int i = 0; i < size; i++)
-        std::unique_ptr<JOjectMem> objm = std::make_unique<JOjectMem>(std::move(objm_head[i]));
+        std::unique_ptr<JOjectElement> objm = std::make_unique<JOjectElement>(std::move(objm_head[i]));
     }
     this->top = head;
   }
   return ret;
 }
 
-JRetType JParser::jst_val_parser(JNode& node, bool is_local) {
+JRetType JParser::main_parser(JNode& node, bool is_local) {
   if (!is_local) {
     auto ret = jst_ws_parser(JST_WS_BEFORE);
     if (ret != JST_PARSE_OK) {
@@ -525,38 +525,38 @@ JRetType JParser::jst_val_parser(JNode& node, bool is_local) {
   JRetType ret = JST_PARSE_OK;
   switch (str[this->str_index]) {
     case 'n':
-      ret = jst_val_parser_symbol(node);
+      ret = parser_symbol(node);
       break;
     case 't':
-      ret = jst_val_parser_symbol(node);
+      ret = parser_symbol(node);
       break;
     case 'f':
-      ret = jst_val_parser_symbol(node);
+      ret = parser_symbol(node);
       break;
     case '\"':
-      ret = jst_val_parser_string(node);
+      ret = parser_string(node);
       break;
     case '[':
-      ret = jst_val_parser_array(node);
+      ret = parser_array(node);
       break;
     case '{':
-      ret = jst_val_parser_object(node);
+      ret = parser_object(node);
       break;
     case '0' ... '9':
-      ret = jst_val_parser_number(node);
+      ret = parser_number(node);
       break;
     case '+':
-      ret = jst_val_parser_number(node);
+      ret = parser_number(node);
       break;
     case '-':
-      ret = jst_val_parser_number(node);
+      ret = parser_number(node);
       break;
     default:
       ret = JST_PARSE_INVALID_VALUE;
   }
 
   if (!is_local && ret == JST_PARSE_OK) {
-    auto ret = jst_ws_parser(JST_WS_AFTER, node.get_type());
+    auto ret = jst_ws_parser(JST_WS_AFTER, node.type());
     if (ret != JST_PARSE_OK) {
       node.jst_node_data_set(JST_NULL);
       return ret;
@@ -577,8 +577,8 @@ JRetType JParser::jst_val_parser(JNode& node, bool is_local) {
     *str_head = json_c;                          \
   } while (0)
 
-void JParser::jst_stringify_string(const JNode& jn) {
-  JST_DEBUG(jn.get_type() == JST_STR);
+void JParser::stringify_string(const JNode& jn) {
+  JST_DEBUG(jn.type() == JST_STR);
   const char* json_str;
   size_t json_str_len;
   jn.jst_node_data_get(&json_str, json_str_len);
@@ -620,9 +620,9 @@ void JParser::jst_stringify_string(const JNode& jn) {
   PUT_C('"');
 }
 
-JRetType JParser::jst_stringify_value(const JNode& jn) {
+JRetType JParser::stringify_value(const JNode& jn) {
   JRetType ret = JST_STRINGIFY_OK;
-  switch (jn.get_type()) {
+  switch (jn.type()) {
     case JST_NULL:
       PUT_STR("null", 4);
       break;
@@ -633,7 +633,7 @@ JRetType JParser::jst_stringify_value(const JNode& jn) {
       PUT_STR("false", 5);
       break;
     case JST_STR:
-      jst_stringify_string(jn);
+      stringify_string(jn);
       break;
     case JST_NUM: {
       double num = 0.0;
@@ -648,7 +648,7 @@ JRetType JParser::jst_stringify_value(const JNode& jn) {
       size_t arr_len = arr.size();
       for (int i = 0; i < arr_len; i++) {
         if (i > 0) PUT_C(',');
-        jst_stringify_value(arr[i]);
+        stringify_value(arr[i]);
       }
       PUT_C(']');
       break;
@@ -665,7 +665,7 @@ JRetType JParser::jst_stringify_value(const JNode& jn) {
         PUT_STR(key.c_str(), key.size());
         PUT_C('"');
         PUT_C(':');
-        jst_stringify_value(obj[i].get_value());
+        stringify_value(obj[i].get_value());
       }
       PUT_C('}');
       break;
@@ -674,11 +674,11 @@ JRetType JParser::jst_stringify_value(const JNode& jn) {
   return ret;
 }
 
-JRetType JParser::jst_stringify(const JNode& jn, char** json_str, size_t& len) {
+JRetType JParser::stringify(const JNode& jn, char** json_str, size_t& len) {
   JRetType ret = JST_STRINGIFY_OK;
   JST_DEBUG(json_str != nullptr);
   JST_DEBUG(this->top == 0);
-  if ((ret = jst_stringify_value(jn)) != JST_STRINGIFY_OK) {
+  if ((ret = stringify_value(jn)) != JST_STRINGIFY_OK) {
     return ret;
   }
   if (this->top) {

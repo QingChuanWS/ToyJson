@@ -8,20 +8,20 @@ static int test_pass = 0;
 
 static void test_parse_null() {
   JParser jc(" null   ");
-  EXPECT_EQ_RET(JST_PARSE_OK, jc.jst_parser());
-  EXPECT_EQ_TYPE(JST_NULL, jc.root.get_type());
+  EXPECT_EQ_RET(JST_PARSE_OK, jc.parser());
+  EXPECT_EQ_TYPE(JST_NULL, jc.root.type());
 }
 
 static void test_parse_bool_true() {
   JParser jc(" true   ");
-  EXPECT_EQ_RET(JST_PARSE_OK, jc.jst_parser());
-  EXPECT_EQ_TYPE(JST_TRUE, jc.root.get_type());
+  EXPECT_EQ_RET(JST_PARSE_OK, jc.parser());
+  EXPECT_EQ_TYPE(JST_TRUE, jc.root.type());
 }
 
 static void test_parse_bool_false() {
   JParser jc(" false   ");
-  EXPECT_EQ_RET(JST_PARSE_OK, jc.jst_parser());
-  EXPECT_EQ_TYPE(JST_FALSE, jc.root.get_type());
+  EXPECT_EQ_RET(JST_PARSE_OK, jc.parser());
+  EXPECT_EQ_TYPE(JST_FALSE, jc.root.type());
 }
 
 static void test_parse_number() {
@@ -71,33 +71,33 @@ static void test_parse_string() {
 
 static void test_parser_array_1() {
   JParser c("[ null , false , true , 123 , \"abc\" ]");
-  EXPECT_EQ_RET(JST_PARSE_OK, c.jst_parser());
-  EXPECT_EQ_TYPE(JST_ARR, c.root.get_type());
+  EXPECT_EQ_RET(JST_PARSE_OK, c.parser());
+  EXPECT_EQ_TYPE(JST_ARR, c.root.type());
   JArray arr;
   c.root.jst_node_data_get(arr);
-  EXPECT_EQ_TYPE(JST_NULL, arr[0].get_type());
-  EXPECT_EQ_TYPE(JST_FALSE, arr[1].get_type());
-  EXPECT_EQ_TYPE(JST_TRUE, arr[2].get_type());
+  EXPECT_EQ_TYPE(JST_NULL, arr[0].type());
+  EXPECT_EQ_TYPE(JST_FALSE, arr[1].type());
+  EXPECT_EQ_TYPE(JST_TRUE, arr[2].type());
   TEST_NODE_NUM(123.0, arr[3]);
   TEST_NODE_STR("abc", arr[4]);
 }
 
 static void test_parser_array_2() {
   JParser c("[ [ ] , [ 0 ] , [ 0 , 1 ] , [ 0 , 1 , 2 ] ]");
-  EXPECT_EQ_INT(JST_PARSE_OK, c.jst_parser());
-  EXPECT_EQ_INT(JST_ARR, c.root.get_type());
+  EXPECT_EQ_INT(JST_PARSE_OK, c.parser());
+  EXPECT_EQ_INT(JST_ARR, c.root.type());
   JArray arr;
   c.root.jst_node_data_get(arr);
 
   do {
-    EXPECT_EQ_SIZE_T(JST_ARR, arr[0].get_type());
+    EXPECT_EQ_SIZE_T(JST_ARR, arr[0].type());
     JArray arr_p;
     arr[0].jst_node_data_get(arr_p);
     EXPECT_EQ_SIZE_T(0, arr_p.size());
   } while (0);
 
   do {
-    EXPECT_EQ_SIZE_T(JST_ARR, arr[1].get_type());
+    EXPECT_EQ_SIZE_T(JST_ARR, arr[1].type());
     JArray arr_p;
     arr[1].jst_node_data_get(arr_p);
     EXPECT_EQ_SIZE_T(1, arr_p.size());
@@ -105,7 +105,7 @@ static void test_parser_array_2() {
   } while (0);
 
   do {
-    EXPECT_EQ_SIZE_T(JST_ARR, arr[2].get_type());
+    EXPECT_EQ_SIZE_T(JST_ARR, arr[2].type());
     JArray arr_p;
     arr[2].jst_node_data_get(arr_p);
     EXPECT_EQ_SIZE_T(2, arr_p.size());
@@ -114,7 +114,7 @@ static void test_parser_array_2() {
   } while (0);
 
   do {
-    EXPECT_EQ_SIZE_T(JST_ARR, arr[3].get_type());
+    EXPECT_EQ_SIZE_T(JST_ARR, arr[3].type());
     JArray arr_p;
     arr[3].jst_node_data_get(arr_p);
     EXPECT_EQ_SIZE_T(3, arr_p.size());
@@ -141,20 +141,20 @@ static void test_parse_object() {
       "\"a\" : [ 1, 2, 3 ],"
       "\"o\" : { \"1\" : 1, \"2\" : 2, \"3\" : 3 }"
       " } ");
-  EXPECT_EQ_RET(JST_PARSE_OK, c.jst_parser());
-  EXPECT_EQ_TYPE(JST_OBJ, c.root.get_type());
+  EXPECT_EQ_RET(JST_PARSE_OK, c.parser());
+  EXPECT_EQ_TYPE(JST_OBJ, c.root.type());
   JObject obj;
   c.root.jst_node_data_get(obj);
   EXPECT_EQ_SIZE_T(7, obj.size());
 
   TEST_OBJ_KEY("n", obj[0].get_key());
-  EXPECT_EQ_TYPE(JST_NULL, obj[0].get_value().get_type());
+  EXPECT_EQ_TYPE(JST_NULL, obj[0].get_value().type());
 
   TEST_OBJ_KEY("f", obj[1].get_key());
-  EXPECT_EQ_TYPE(JST_FALSE, obj[1].get_value().get_type());
+  EXPECT_EQ_TYPE(JST_FALSE, obj[1].get_value().type());
 
   TEST_OBJ_KEY("t", obj[2].get_key());
-  EXPECT_EQ_TYPE(JST_TRUE, obj[2].get_value().get_type());
+  EXPECT_EQ_TYPE(JST_TRUE, obj[2].get_value().type());
 
   TEST_OBJ_KEY("i", obj[3].get_key());
   TEST_NODE_NUM(123.0, obj[3].get_value());
@@ -164,7 +164,7 @@ static void test_parse_object() {
 
   TEST_OBJ_KEY("a", obj[5].get_key());
   do {
-    EXPECT_EQ_SIZE_T(JST_ARR, obj[5].get_value().get_type());
+    EXPECT_EQ_SIZE_T(JST_ARR, obj[5].get_value().type());
     JArray arr_p;
     obj[5].get_value().jst_node_data_get(arr_p);
     EXPECT_EQ_SIZE_T(3, arr_p.size());
@@ -174,9 +174,9 @@ static void test_parse_object() {
   } while (0);
 
   TEST_OBJ_KEY("o", obj[6].get_key());
-  EXPECT_EQ_TYPE(JST_OBJ, obj[6].get_value().get_type());
+  EXPECT_EQ_TYPE(JST_OBJ, obj[6].get_value().type());
   do {
-    EXPECT_EQ_SIZE_T(JST_OBJ, obj[6].get_value().get_type());
+    EXPECT_EQ_SIZE_T(JST_OBJ, obj[6].get_value().type());
     JObject obj_p;
     obj[6].get_value().jst_node_data_get(obj_p);
     EXPECT_EQ_SIZE_T(3, obj_p.size());

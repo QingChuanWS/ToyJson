@@ -1,12 +1,3 @@
-/*
- * @Author: QingChuanWS bingshan45@163.com
- * @Date: 2023-01-15 01:41:20
- * @LastEditors: QingChuanWS bingshan45@163.com
- * @LastEditTime: 2023-11-02 23:21:58
- * @FilePath: /json_toy/inc/enum.h
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置:
- * https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
- */
 #ifndef __JSON_TOY_ENUM_H__
 #define __JSON_TOY_ENUM_H__
 

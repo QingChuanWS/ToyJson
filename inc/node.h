@@ -22,7 +22,7 @@ class JNode {
   void jst_node_data_reset(const double data);
   void jst_node_data_reset(const JArray& data);
   void jst_node_data_reset(const JObject& data);
-  JNType get_type() const { return type; }
+  JNType type() const { return ty; }
 
   JNode(const JNode& node);
   JNode(JNode&& node) noexcept;
@@ -54,7 +54,7 @@ class JNode {
   JRetType jst_node_parser_str(const char* str, size_t len);
 
   shared_ptr<JData> data = nullptr;
-  JNType type = JST_NULL;
+  JNType ty = JST_NULL;
 };
 
 }  // namespace jst

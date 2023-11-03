@@ -147,7 +147,7 @@ static void test_equal() {
 static void test_copy() {
   JParser jc("{\"t\":true,\"f\":false,\"n\":null,\"d\":1.5,\"a\":[1,2,3]}");
   JNode jn_1, jn_2;
-  jc.jst_parser(&jn_1);
+  jc.parser(&jn_1);
   jn_2 = jn_1;
   EXPECT_TRUE(jn_1 == jn_2);
 }
@@ -155,10 +155,10 @@ static void test_copy() {
 static void test_move() {
   JNode jn_1, jn_2, jn_3;
   JParser jc("{\"t\":true,\"f\":false,\"n\":null,\"d\":1.5,\"a\":[1,2,3]}");
-  jc.jst_parser(&jn_1);
+  jc.parser(&jn_1);
   jn_2 = jn_1;
   jn_3 = std::move(jn_2);
-  EXPECT_EQ_INT(JST_NULL, jn_2.get_type());
+  EXPECT_EQ_INT(JST_NULL, jn_2.type());
   EXPECT_TRUE(jn_1 == jn_3);
 }
 
@@ -217,14 +217,14 @@ static void test_jst_str_node() {
     JNode jn_r(JST_STR, str, strlen(str));
     JNode jn = std::move(jn_r);
     TEST_NODE_STR(str, jn);
-    EXPECT_EQ_TYPE(JST_NULL, jn_r.get_type());
+    EXPECT_EQ_TYPE(JST_NULL, jn_r.type());
   } while (0);
   do {
     JNode jn_r(JST_STR, str, strlen(str));
     JNode jn(JST_STR, str_2, strlen(str_2));
     jn = std::move(jn_r);
     TEST_NODE_STR(str, jn);
-    EXPECT_EQ_TYPE(JST_NULL, jn_r.get_type());
+    EXPECT_EQ_TYPE(JST_NULL, jn_r.type());
   } while (0);
 }
 
@@ -255,14 +255,14 @@ static void test_jst_num_node() {
     JNode jn_r(JST_STR, str, strlen(str));
     JNode jn = std::move(jn_r);
     TEST_NODE_NUM(1.23e3, jn_r);
-    EXPECT_EQ_INT(JST_NULL, jn_r.get_type());
+    EXPECT_EQ_INT(JST_NULL, jn_r.type());
   } while (0);
   do {
     JNode jn_r(JST_STR, str, strlen(str));
     JNode jn(JST_STR, str_2, strlen(str_2));
     jn = std::move(jn_r);
     TEST_NODE_NUM(1.23e3, jn_r);
-    EXPECT_EQ_INT(JST_NULL, jn_r.get_type());
+    EXPECT_EQ_INT(JST_NULL, jn_r.type());
   } while (0);
 }
 

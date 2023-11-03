@@ -66,12 +66,6 @@ JString::~JString() {
   this->s = nullptr;
 }
 
-const size_t JString::size() const { return length; };
-
-const char* JString::c_str() const { return s; }
-
-const bool JString::empty() const { return s == nullptr || length == 0; }
-
 bool operator==(const JString& str_1, const JString& str_2) {
   return (str_1.length == str_2.length) && memcmp(str_1.c_str(), str_2.c_str(), str_1.size()) == 0;
 }
@@ -99,73 +93,64 @@ inline int tableSizeFor(int cap) {
 
 JArray::JArray(size_t len) {
   this->cap_ = tableSizeFor(len);
-  this->a_ = new JNode[this->cap_];
+  this->data_ = new JNode[this->cap_];
   this->len_ = len;
 }
 
 JArray::JArray(const JArray& arr) {
-  ASSERT_VECTOR_NO_RET(arr, a_, len_);
+  ASSERT_VECTOR_NO_RET(arr, data_, len_);
   this->cap_ = arr.cap_;
   this->len_ = arr.len_;
-  this->a_ = new JNode[this->cap_];
-  for (int i = 0; i < this->len_; i++) this->a_[i] = arr.a_[i];
+  this->data_ = new JNode[this->cap_];
+  for (int i = 0; i < this->len_; i++) this->data_[i] = arr.data_[i];
 }
 
-JArray::JArray(JArray&& arr) noexcept : a_(arr.a_), len_(arr.len_), cap_(arr.cap_) {
-  arr.a_ = nullptr;
+JArray::JArray(JArray&& arr) noexcept : data_(arr.data_), len_(arr.len_), cap_(arr.cap_) {
+  arr.data_ = nullptr;
   arr.len_ = 0;
   arr.cap_ = 0;
 }
 
 JArray& JArray::operator=(const JArray& arr) {
   if (this != &arr) {
-    if (this->a_ != nullptr) delete[] this->a_;
-    ASSERT_VECTOR_HAS_RET(arr, a_, len_, *this);
+    if (this->data_ != nullptr) delete[] this->data_;
+    ASSERT_VECTOR_HAS_RET(arr, data_, len_, *this);
     this->cap_ = arr.cap_;
     this->len_ = arr.len_;
-    this->a_ = new JNode[this->cap_];
-    for (int i = 0; i < this->len_; i++) this->a_[i] = arr.a_[i];
+    this->data_ = new JNode[this->cap_];
+    for (int i = 0; i < this->len_; i++) this->data_[i] = arr.data_[i];
   }
   return *this;
 }
 
 JArray& JArray::operator=(JArray&& arr) noexcept {
-  if (this->a_ != nullptr) delete[] this->a_;
-  ASSERT_VECTOR_HAS_RET(arr, a_, len_, *this);
-  this->a_ = arr.a_;
+  if (this->data_ != nullptr) delete[] this->data_;
+  ASSERT_VECTOR_HAS_RET(arr, data_, len_, *this);
+  this->data_ = arr.data_;
   this->cap_ = arr.cap_;
   this->len_ = arr.len_;
-  arr.a_ = nullptr;
+  arr.data_ = nullptr;
   arr.len_ = 0;
   arr.cap_ = 0;
   return *this;
 }
 
 JArray::~JArray() {
-  if (this->a_ != nullptr) delete[] this->a_;
-  this->a_ = nullptr;
+  if (this->data_ != nullptr) delete[] this->data_;
+  this->data_ = nullptr;
   this->len_ = 0;
   this->cap_ = 0;
 }
 
 JNode& JArray::operator[](int index) {
   JST_DEBUG(index >= 0 && index < len_);
-  return this->a_[index];
+  return this->data_[index];
 }
 
 const JNode& JArray::operator[](int index) const {
   JST_DEBUG(index >= 0 && index < len_);
-  return this->a_[index];
+  return this->data_[index];
 }
-
-size_t JArray::size() const { return len_; };
-bool JArray::empty() const { return len_ == 0; }
-
-size_t JArray::capacity() const { return this->cap_; }
-
-const JNode* JArray::data() const { return this->a_; };
-
-JNode* JArray::data() { return this->a_; };
 
 #define JST_NODE_NOT_EXIST ((size_t)-1)
 
@@ -181,7 +166,7 @@ bool operator==(const JArray& arr_1, const JArray& arr_2) {
 size_t JArray::find(const JNode& jn) const {
   size_t size = this->size();
   for (size_t i = 0; i < size; i++) {
-    if (jn == a_[i]) return i;
+    if (jn == data_[i]) return i;
   }
   return JST_NODE_NOT_EXIST;
 }
@@ -190,19 +175,19 @@ size_t JArray::insert(size_t pos, JNode& jn) {
   JST_DEBUG(pos <= size());
   if (this->cap_ == 0) {
     this->cap_ = 2;
-    this->a_ = new JNode[this->cap_];
+    this->data_ = new JNode[this->cap_];
   }
   if (this->len_ + 1 > this->cap_) {
     this->cap_ += (this->cap_ >> 1);
-    JNode* tmp = this->a_;
-    this->a_ = new JNode[this->cap_];
-    for (size_t i = 0; i < pos; i++) this->a_[i] = std::move(tmp[i]);
-    this->a_[pos] = jn;
-    for (size_t i = pos + 1; i < this->len_ + 1; i++) this->a_[i] = tmp[i - 1];
+    JNode* tmp = this->data_;
+    this->data_ = new JNode[this->cap_];
+    for (size_t i = 0; i < pos; i++) this->data_[i] = std::move(tmp[i]);
+    this->data_[pos] = jn;
+    for (size_t i = pos + 1; i < this->len_ + 1; i++) this->data_[i] = tmp[i - 1];
     delete[] tmp;
   } else {
-    for (size_t i = this->len_; i > pos; i--) this->a_[i] = std::move(this->a_[i - 1]);
-    this->a_[pos] = jn;
+    for (size_t i = this->len_; i > pos; i--) this->data_[i] = std::move(this->data_[i - 1]);
+    this->data_[pos] = jn;
   }
   this->len_ += 1;
   return pos;
@@ -212,7 +197,8 @@ size_t JArray::erase(size_t pos, size_t count) {
   JST_DEBUG(pos >= 0 && pos < this->len_);
   if (count == 0) return pos;
   count = std::min(count, this->len_ - pos);
-  for (size_t i = pos; i + count < this->len_; i++) this->a_[i] = std::move(this->a_[i + count]);
+  for (size_t i = pos; i + count < this->len_; i++)
+    this->data_[i] = std::move(this->data_[i + count]);
   this->len_ -= count;
   return pos;
 }
@@ -220,16 +206,16 @@ size_t JArray::erase(size_t pos, size_t count) {
 void JArray::push_back(const JNode& jn) {
   if (this->cap_ == 0) {
     this->cap_ = 2;
-    this->a_ = new JNode[this->cap_];
+    this->data_ = new JNode[this->cap_];
   }
   if (this->len_ + 1 > this->cap_) {
     this->cap_ = this->cap_ == 1 ? 2 : this->cap_ + (this->cap_ >> 1);
-    JNode* tmp = this->a_;
-    this->a_ = new JNode[this->cap_];
-    for (size_t i = 0; i < this->len_; i++) this->a_[i] = std::move(tmp[i]);
+    JNode* tmp = this->data_;
+    this->data_ = new JNode[this->cap_];
+    for (size_t i = 0; i < this->len_; i++) this->data_[i] = std::move(tmp[i]);
     delete[] tmp;
   }
-  this->a_[this->len_++] = jn;
+  this->data_[this->len_++] = jn;
 }
 
 void JArray::pop_back() {
@@ -243,57 +229,61 @@ void JArray::reserve(size_t new_cap) {
   if (new_cap <= this->cap_) return;
   this->cap_ = tableSizeFor(new_cap);
   if (this->len_ > 0) {
-    JNode* tmp = this->a_;
-    this->a_ = new JNode[this->cap_];
-    for (size_t i = 0; i < this->len_; i++) this->a_[i] = std::move(tmp[i]);
+    JNode* tmp = this->data_;
+    this->data_ = new JNode[this->cap_];
+    for (size_t i = 0; i < this->len_; i++) this->data_[i] = std::move(tmp[i]);
     delete[] tmp;
   } else
-    this->a_ = new JNode[this->cap_];
+    this->data_ = new JNode[this->cap_];
 }
 
 void JArray::shrink_to_fit() {
   if (cap_ == len_) return;
-  JNode* tmp = this->a_;
+  JNode* tmp = this->data_;
   this->cap_ = this->len_;
-  this->a_ = new JNode[this->len_];
-  for (size_t i = 0; i < len_; i++) this->a_[i] = std::move(tmp[i]);
+  this->data_ = new JNode[this->len_];
+  for (size_t i = 0; i < len_; i++) this->data_[i] = std::move(tmp[i]);
   delete[] tmp;
 }
 
 /*
 object member implementation.
 */
-JOjectMem::JOjectMem(const JString& key, const JNode& value) {
+JOjectElement::JOjectElement(const JString& key, const JNode& value) {
   this->key = new JString(key);
   this->value = new JNode(value);
 }
 
-JOjectMem::JOjectMem(JString&& key, JNode&& value) {
+JOjectElement::JOjectElement(JString&& key, JNode&& value) {
   this->key = new JString(std::move(key));
   this->value = new JNode(std::move(value));
 }
 
-JOjectMem::JOjectMem(const JOjectMem& om) {
+JOjectElement::JOjectElement(const JOjectElement& om) {
   this->key = new JString(*om.key);
   this->value = new JNode(*om.value);
 }
 
-JOjectMem& JOjectMem::operator=(const JOjectMem& om) {
+JOjectElement& JOjectElement::operator=(const JOjectElement& om) {
   if (this != &om) {
-    if (this->key != nullptr) delete this->key;
-    if (this->value != nullptr) delete this->value;
+    if (this->key != nullptr) {
+      delete this->key;
+    }
+    if (this->value != nullptr) {
+      delete this->value;
+    }
     this->key = new JString(*om.key);
     this->value = new JNode(*om.value);
   }
   return *this;
 }
 
-JOjectMem::JOjectMem(JOjectMem&& om) noexcept : key(om.key), value(om.value) {
+JOjectElement::JOjectElement(JOjectElement&& om) noexcept : key(om.key), value(om.value) {
   om.value = nullptr;
   om.key = nullptr;
 }
 
-JOjectMem& JOjectMem::operator=(JOjectMem&& om) noexcept {
+JOjectElement& JOjectElement::operator=(JOjectElement&& om) noexcept {
   if (this->key != nullptr) delete this->key;
   if (this->value != nullptr) delete this->value;
   this->key = om.key;
@@ -302,18 +292,18 @@ JOjectMem& JOjectMem::operator=(JOjectMem&& om) noexcept {
   om.key = nullptr;
   return *this;
 }
-JOjectMem::~JOjectMem() {
+JOjectElement::~JOjectElement() {
   if (this->value != nullptr) delete this->value;
   this->value = nullptr;
   if (this->key != nullptr) delete this->key;
   this->key = nullptr;
 }
 
-bool operator==(JOjectMem objm_1, JOjectMem objm_2) {
-  return (objm_1.get_key() == objm_2.get_key()) && (objm_1.get_value() == objm_2.get_value());
+bool operator==(const JOjectElement& left, const JOjectElement& right) {
+  return (left.get_key() == right.get_key()) && (left.get_value() == right.get_value());
 }
 
-bool operator!=(const JOjectMem objm_1, const JOjectMem objm_2) { return !(objm_1 == objm_2); }
+bool operator!=(const JOjectElement& left, const JOjectElement& right) { return !(left == right); }
 
 /*
 object class implemention;
@@ -353,6 +343,6 @@ bool operator==(const JObject& left, const JObject& right) {
   return true;
 }
 
-bool operator!=(const JObject& objm_1, const JObject& objm_2) { return !(objm_1 == objm_2); }
+bool operator!=(const JObject& left, const JObject& right) { return !(left == right); }
 
 }  // namespace jst

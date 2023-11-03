@@ -8,7 +8,7 @@ static int test_pass = 0;
 
 static void test_access_null() {
   JNode jn;
-  EXPECT_EQ_INT(JST_NULL, jn.get_type());
+  EXPECT_EQ_INT(JST_NULL, jn.type());
 }
 
 static void test_access_boolean() {

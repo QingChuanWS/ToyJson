@@ -53,9 +53,9 @@ class JString : virtual public JData {
   ~JString();
 
  public:
-  const size_t size() const;
-  const char* c_str() const;
-  const bool empty() const;
+  const size_t size() const { return length; };
+  const char* c_str() const { return s; }
+  const bool empty() const { return s == nullptr || length == 0; }
 
  public:
   friend bool operator==(const JString& str_1, const JString& str_2);
@@ -74,7 +74,7 @@ class JNumber : public JData {
 
 class JArray : public JData {
  private:
-  JNode* a_ = nullptr;
+  JNode* data_ = nullptr;
   size_t len_ = 0;
   size_t cap_ = 0;
 
@@ -92,12 +92,12 @@ class JArray : public JData {
   const JNode& operator[](int index) const;
 
   size_t find(const JNode& jn) const;
-  size_t size() const;
-  size_t capacity() const;
-  bool empty() const;
+  size_t size() const { return len_; };
+  size_t capacity() const { return this->cap_; };
+  bool empty() const { return len_ == 0; };
 
-  const JNode* data() const;
-  JNode* data();
+  const JNode* data() const { return this->data_; };
+  JNode* data() { return this->data_; };
 
  public:
   size_t insert(size_t pos, JNode& jn);
@@ -113,67 +113,67 @@ class JArray : public JData {
 };
 
 // object
-class JOjectMem {
+class JOjectElement {
  private:
   JString* key = nullptr;
   JNode* value = nullptr;
 
  public:
-  JOjectMem() = default;
-  JOjectMem(const JString& key, const JNode& value);
-  JOjectMem(JString&& key, JNode&& value);
+  JOjectElement() = default;
+  JOjectElement(const JString& key, const JNode& value);
+  JOjectElement(JString&& key, JNode&& value);
 
-  JOjectMem(const JOjectMem& om);
-  JOjectMem& operator=(const JOjectMem& om);
-  JOjectMem(JOjectMem&& om) noexcept;
-  JOjectMem& operator=(JOjectMem&& om) noexcept;
-  ~JOjectMem();
+  JOjectElement(const JOjectElement& om);
+  JOjectElement& operator=(const JOjectElement& om);
+  JOjectElement(JOjectElement&& om) noexcept;
+  JOjectElement& operator=(JOjectElement&& om) noexcept;
+  ~JOjectElement();
 
  public:
   const JString& get_key() const { return *key; }
   const JNode& get_value() const { return *value; }
 
  public:
-  friend bool operator==(const JOjectMem objm_1, const JOjectMem objm_2);
-  friend bool operator!=(const JOjectMem objm_1, const JOjectMem objm_2);
+  friend bool operator==(const JOjectElement& left, const JOjectElement& right);
+  friend bool operator!=(const JOjectElement& left, const JOjectElement& right);
 };
 
 class JObject : public JData {
  private:
-  JVector<JOjectMem> obj_;
+  JVector<JOjectElement> obj_;
 
  public:
   JObject(){};
   explicit JObject(size_t length) { obj_.reserve(length); }
 
  public:
-  const JOjectMem& operator[](int index) const { return this->obj_[index]; }
-  JOjectMem& operator[](int index) { return this->obj_[index]; }
+  const JOjectElement& operator[](int index) const { return this->obj_[index]; }
+  JOjectElement& operator[](int index) { return this->obj_[index]; }
 
-  size_t find_index(const JString& key) const ;
+  size_t find_index(const JString& key) const;
   const JNode* find_value(const JString& key) const;
   bool empty() const { return obj_.empty(); }
   size_t size() const { return obj_.size(); }
   size_t capacity() const { return obj_.capacity(); }
 
-  const JOjectMem* data() const { return this->obj_.data(); }
-  JOjectMem* data() { return this->obj_.data(); }
+  const JOjectElement* data() const { return this->obj_.data(); }
+  JOjectElement* data() { return this->obj_.data(); }
 
   const JString& get_key(size_t index) const { return obj_[index].get_key(); }
   const JNode& get_value(size_t index) const { return obj_[index].get_value(); }
 
  public:
-  size_t insert(size_t pos, JOjectMem& objm);
+  size_t insert(size_t pos, JOjectElement& objm);
   size_t erase(size_t pos, size_t count = 1);
-  void push_back(const JOjectMem& objm);
+  void push_back(const JOjectElement& objm);
   void pop_back();
   void clear();
   void reserve(size_t new_cap);
   void shrink_to_fit();
 
  public:
-  friend bool operator==(const JObject& obj_1, const JObject& obj_2);
-  friend bool operator!=(const JObject& objm_1, const JObject& objm_2);
+  friend bool operator==(const JObject& left, const JObject& right);
+  friend bool operator!=(const JObject& left, const JObject& right);
 };
 
 }  // namespace jst
