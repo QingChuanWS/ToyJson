@@ -12,17 +12,12 @@ using std::shared_ptr;
 class JNode {
  public:
   JNode() = default;
-  JNode(JNType t, const char* str = nullptr, size_t len = 0);
-  JNode(JNType t, double num);
-  JNode(JNType t, JArray& arr);
-  JNode(JNType t, JObject& obj);
-
-  void jst_node_data_reset(const bool data);
-  void jst_node_data_reset(const JString& data);
-  void jst_node_data_reset(const double data);
-  void jst_node_data_reset(const JArray& data);
-  void jst_node_data_reset(const JObject& data);
-  JNType type() const { return ty; }
+  JNode(JNType t, const char* str, size_t len = 0);
+  explicit JNode(JNType t) : _type(t), _data(nullptr) {}
+  JNode(const JString& s) : _type(JST_STR), _data(std::make_shared<JString>(s)) {}
+  JNode(double num) : _type(JST_NUM), _data(std::make_shared<JNumber>(num)) {}
+  JNode(const JArray& arr) : _type(JST_ARR), _data(std::make_shared<JArray>(arr)) {}
+  JNode(const JObject& obj) : _type(JST_OBJ), _data(std::make_shared<JObject>(obj)) {}
 
   JNode(const JNode& node);
   JNode(JNode&& node) noexcept;
@@ -34,11 +29,7 @@ class JNode {
   friend bool operator!=(const JNode& jn_1, const JNode& jn_2);
   friend void swap(JNode& jn_1, JNode& jn_2);
 
-  JRetType jst_node_data_set(JNType t, const char* str = nullptr, const size_t len = 0);
-  JRetType jst_node_data_set(JNType t, double num);
-  JRetType jst_node_data_set(JNType t, JString&& s);
-  JRetType jst_node_data_set(JNType t, JArray&& arr);
-  JRetType jst_node_data_set(JNType t, JObject&& obj);
+  JRetType data_set(JNType t, const char* str = nullptr, const size_t len = 0);
 
   void jst_node_data_get(std::string& node_str) const;
   void jst_node_data_get(const char** node_str, size_t& len) const;
@@ -47,14 +38,14 @@ class JNode {
   void jst_node_data_get(JArray& arr) const;
   void jst_node_data_get(JObject& obj) const;
 
-  size_t jst_node_data_length_get() const;
+  JNType type() const { return _type; }
+  JData data() const { return *_data; }
 
  private:
   JRetType jst_node_parser_num(const std::string& str);
-  JRetType jst_node_parser_str(const char* str, size_t len);
 
-  shared_ptr<JData> data = nullptr;
-  JNType ty = JST_NULL;
+  shared_ptr<JData> _data = nullptr;
+  JNType _type = JST_NULL;
 };
 
 }  // namespace jst

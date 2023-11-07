@@ -56,6 +56,7 @@ class JString : virtual public JData {
   const size_t size() const { return length; };
   const char* c_str() const { return s; }
   const bool empty() const { return s == nullptr || length == 0; }
+  std::string value() { return std::string(s, length); };
 
  public:
   friend bool operator==(const JString& str_1, const JString& str_2);

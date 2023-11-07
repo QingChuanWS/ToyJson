@@ -1,3 +1,5 @@
+#include "enum.h"
+#include "node.h"
 #include "parser.h"
 #include "utils.h"
 
@@ -13,20 +15,20 @@ static void test_access_null() {
 
 static void test_access_boolean() {
   JNode jn;
-  jn.jst_node_data_set(JST_STR, "a", 1);
-  jn.jst_node_data_reset(true);
+  jn.data_set(JST_STR, "a", 1);
+  jn = JNode(JST_TRUE);
   bool data;
   jn.jst_node_data_get(data);
   EXPECT_TRUE(data);
-  jn.jst_node_data_set(JST_FALSE);
+  jn.data_set(JST_FALSE);
   jn.jst_node_data_get(data);
   EXPECT_FALSE(data);
 }
 
 static void test_access_number() {
   JNode jn;
-  jn.jst_node_data_set(JST_STR, "a", 1);
-  jn.jst_node_data_reset(1234.5);
+  jn.data_set(JST_STR, "a", 1);
+  jn = JNode(1234.5);
   double num;
   jn.jst_node_data_get(num);
   EXPECT_EQ_DOUBLE(1234.5, num);
@@ -34,12 +36,12 @@ static void test_access_number() {
 
 static void test_access_string() {
   JNode jn;
-  jn.jst_node_data_set(JST_STR, "", 0);
+  jn.data_set(JST_STR, "", 0);
   const char* str_head;
   size_t str_len;
   jn.jst_node_data_get(&str_head, str_len);
   EXPECT_EQ_STRING("", str_head, str_len);
-  jn.jst_node_data_reset(JString("Hello", 5));
+  jn = JNode(JString("Hello", 5));
   jn.jst_node_data_get(&str_head, str_len);
   EXPECT_EQ_STRING("Hello", str_head, str_len);
 }
@@ -53,7 +55,7 @@ static void test_access_array() {
   EXPECT_EQ_SIZE_T(0, a.size());
   EXPECT_EQ_SIZE_T(1, a.capacity());
   for (i = 0; i < 10; i++) {
-    e.jst_node_data_reset((double)i);
+    e = JNode((double)i);
     a.push_back(e);
   }
 
@@ -97,7 +99,7 @@ static void test_access_array() {
   }
 
   for (i = 0; i < 2; i++) {
-    e.jst_node_data_reset((double)i);
+    e = JNode(i);
     a.insert(i, e);
   }
 
@@ -118,7 +120,7 @@ static void test_access_array() {
     EXPECT_EQ_DOUBLE((double)i, num);
   }
 
-  e.jst_node_data_reset(JString("Hello", 5));
+  e = JNode(JString("Hello", 5));
   a.push_back(e);
 
   i = a.capacity();
@@ -138,7 +140,7 @@ static void test_access_vector() {
   EXPECT_EQ_SIZE_T(0, v.size());
   EXPECT_EQ_SIZE_T(3, v.capacity());
   for (i = 0; i < 10; i++) {
-    e.jst_node_data_reset((double)i);
+    e = JNode((double)i);
     v.push_back(e);
   }
 
@@ -182,7 +184,7 @@ static void test_access_vector() {
   }
 
   for (i = 0; i < 2; i++) {
-    e.jst_node_data_reset((double)i);
+    e = JNode((double)i);
     v.insert(i, e);
   }
 
@@ -203,7 +205,7 @@ static void test_access_vector() {
     EXPECT_EQ_DOUBLE((double)i, num);
   }
 
-  e.jst_node_data_reset(JString("Hello", 5));
+  e = JNode(JString("Hello", 5));
   v.push_back(e);
 
   i = v.capacity();
