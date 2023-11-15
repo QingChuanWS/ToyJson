@@ -1,3 +1,4 @@
+#include "basic.h"
 #include "parser.h"
 #include "utils.h"
 
@@ -166,12 +167,10 @@ static void test_swap() {
   JNode jn_1(JST_STR, "Hello", strlen("Hello"));
   JNode jn_2(JST_STR, "World!", strlen("World!"));
   swap(jn_1, jn_2);
-  const char* str_head;
-  size_t str_len;
-  jn_1.jst_node_data_get(&str_head, str_len);
-  EXPECT_EQ_STRING("World!", str_head, str_len);
-  jn_2.jst_node_data_get(&str_head, str_len);
-  EXPECT_EQ_STRING("Hello", str_head, str_len);
+  auto str = jn_1.data().as<JString>().value();
+  EXPECT_EQ_STRING("World!", str.c_str(), str.size());
+  str = jn_2.data().as<JString>().value();
+  EXPECT_EQ_STRING("Hello", str.c_str(), str.size());
 }
 
 static void test_parse() {
@@ -191,7 +190,7 @@ static void test_parse() {
 }
 
 static void test_jst_str_node() {
-  char str[] = "Hello_world";
+  const char str[] = "Hello_world";
   do {
     JNode jn_r(JST_STR, str, strlen(str));
     JNode jn = jn_r;
@@ -237,7 +236,7 @@ static void test_jst_num_node() {
     TEST_NODE_NUM(1.23e3, jn);
   } while (0);
   do {
-    JNode jn_r(JST_STR, str, strlen(str));
+    JNode jn_r(JST_NUM, str, strlen(str));
     JNode jn;
     jn = jn_r;
     TEST_NODE_NUM(1.23e3, jn_r);
@@ -245,23 +244,21 @@ static void test_jst_num_node() {
   } while (0);
   char str_2[] = "5.67e3";
   do {
-    JNode jn_r(JST_STR, str, strlen(str));
-    JNode jn(JST_STR, str_2, strlen(str_2));
+    JNode jn_r(JST_NUM, str, strlen(str));
+    JNode jn(JST_NUM, str_2, strlen(str_2));
     jn = jn_r;
     TEST_NODE_NUM(1.23e3, jn_r);
     TEST_NODE_NUM(1.23e3, jn);
   } while (0);
   do {
-    JNode jn_r(JST_STR, str, strlen(str));
+    JNode jn_r(JST_NUM, str, strlen(str));
     JNode jn = std::move(jn_r);
-    TEST_NODE_NUM(1.23e3, jn_r);
     EXPECT_EQ_INT(JST_NULL, jn_r.type());
   } while (0);
   do {
-    JNode jn_r(JST_STR, str, strlen(str));
-    JNode jn(JST_STR, str_2, strlen(str_2));
+    JNode jn_r(JST_NUM, str, strlen(str));
+    JNode jn(JST_NUM, str_2, strlen(str_2));
     jn = std::move(jn_r);
-    TEST_NODE_NUM(1.23e3, jn_r);
     EXPECT_EQ_INT(JST_NULL, jn_r.type());
   } while (0);
 }
@@ -274,6 +271,7 @@ int main() {
 #endif
   jst::test_parse();
   jst::test_jst_str_node();
+  jst::test_jst_num_node();
   jst::test_equal();
   // jst::test_copy();
   // jst::test_move();

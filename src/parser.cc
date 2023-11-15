@@ -579,12 +579,12 @@ JRetType JParser::main_parser(JNode& node, bool is_local) {
 
 void JParser::stringify_string(const JNode& jn) {
   JST_DEBUG(jn.type() == JST_STR);
-  const char* json_str;
-  size_t json_str_len;
-  jn.jst_node_data_get(&json_str, json_str_len);
+  std::string str = jn.data().as<JString>().value();
+  const auto jstr = str.c_str();
+  const auto slen = str.size();
   PUT_C('"');
-  for (int i = 0; i < json_str_len; i++) {
-    unsigned char ch = (unsigned char)json_str[i];
+  for (int i = 0; i < slen; i++) {
+    unsigned char ch = (unsigned char)jstr[i];
     switch (ch) {
       case '\"':
         PUT_STR("\\\"", 2);
@@ -613,7 +613,7 @@ void JParser::stringify_string(const JNode& jn) {
           sprintf(buffer, "\\u%04x", ch);
           PUT_STR(buffer, 6);
         } else
-          PUT_C(json_str[i]);
+          PUT_C(jstr[i]);
         break;
     }
   }
@@ -636,15 +636,13 @@ JRetType JParser::stringify_value(const JNode& jn) {
       stringify_string(jn);
       break;
     case JST_NUM: {
-      double num = 0.0;
-      jn.jst_node_data_get(num);
+      auto num = jn.data().as<JNumber>().value();
       this->top -= (32 - sprintf((char*)this->stack_push(32), "%.17g", num));
       break;
     }
     case JST_ARR: {
       PUT_C('[');
-      JArray arr;
-      jn.jst_node_data_get(arr);
+      auto arr = jn.data().as<JArray>().value();
       size_t arr_len = arr.size();
       for (int i = 0; i < arr_len; i++) {
         if (i > 0) PUT_C(',');
@@ -655,8 +653,7 @@ JRetType JParser::stringify_value(const JNode& jn) {
     }
     case JST_OBJ: {
       PUT_C('{');
-      JObject obj;
-      jn.jst_node_data_get(obj);
+      auto obj = jn.data().as<JObject>().value();
       size_t obj_len = obj.size();
       for (int i = 0; i < obj_len; i++) {
         if (i > 0) PUT_C(',');

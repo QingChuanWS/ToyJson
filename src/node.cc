@@ -79,40 +79,6 @@ JNode::~JNode() {
   _data = nullptr;
 }
 
-// get the data of number node;
-void JNode::jst_node_data_get(double& num) const {
-  JST_DEBUG(_type == JST_NUM);
-  num = _data->as<JNumber>().get();
-}
-
-// get the data of string node;
-void JNode::jst_node_data_get(std::string& str) const {
-  JST_DEBUG(_type == JST_STR);
-  auto d = _data->as<JString>();
-  str = std::string(d.c_str(), d.size());
-}
-
-void JNode::jst_node_data_get(const char** node_str, size_t& len) const {
-  JST_DEBUG(_type == JST_STR);
-  *node_str = _data->as<JString>().c_str();
-  len = _data->as<JString>().size();
-}
-
-void JNode::jst_node_data_get(bool& b) const {
-  JST_DEBUG(_type == JST_FALSE || _type == JST_TRUE);
-  b = _type == JST_TRUE ? true : false;
-}
-
-void JNode::jst_node_data_get(JArray& arr) const {
-  JST_DEBUG(_type == JST_ARR);
-  arr = _data->as<JArray>();
-}
-
-void JNode::jst_node_data_get(JObject& obj) const {
-  JST_DEBUG(_type == JST_OBJ);
-  obj = _data->as<JObject>();
-}
-
 JRetType JNode::jst_node_parser_num(const std::string& str) {
   if (str[0] == '0' && str.size() > 1) {
     _type = JST_NULL;

@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "enum.h"
 #include "utils.h"
@@ -13,7 +14,6 @@
 namespace jst {
 
 class JNode;
-using jst::utils::JVector;
 
 struct NumberExp {
   bool is_have;
@@ -52,11 +52,10 @@ class JString : virtual public JData {
   JString& operator=(JString&& s) noexcept;
   ~JString();
 
- public:
   const size_t size() const { return length; };
   const char* c_str() const { return s; }
   const bool empty() const { return s == nullptr || length == 0; }
-  std::string value() { return std::string(s, length); };
+  std::string value() const { return std::string(s, length); }
 
  public:
   friend bool operator==(const JString& str_1, const JString& str_2);
@@ -71,6 +70,7 @@ class JNumber : public JData {
   friend bool operator==(const JNumber& num_1, const JNumber& num_2);
   explicit JNumber(double n) : num(n){};
   const double get() const { return num; };
+  double value() const { return num; }
 };
 
 class JArray : public JData {
@@ -88,7 +88,6 @@ class JArray : public JData {
   JArray& operator=(JArray&& arr) noexcept;
   ~JArray();
 
- public:
   JNode& operator[](int index);
   const JNode& operator[](int index) const;
 
@@ -99,6 +98,7 @@ class JArray : public JData {
 
   const JNode* data() const { return this->data_; };
   JNode* data() { return this->data_; };
+  JArray value() const { return JArray(*this); }
 
  public:
   size_t insert(size_t pos, JNode& jn);
@@ -123,10 +123,10 @@ class JOjectElement {
   JOjectElement() = default;
   JOjectElement(const JString& key, const JNode& value);
   JOjectElement(JString&& key, JNode&& value);
-
   JOjectElement(const JOjectElement& om);
-  JOjectElement& operator=(const JOjectElement& om);
   JOjectElement(JOjectElement&& om) noexcept;
+
+  JOjectElement& operator=(const JOjectElement& om);
   JOjectElement& operator=(JOjectElement&& om) noexcept;
   ~JOjectElement();
 
@@ -141,13 +141,12 @@ class JOjectElement {
 
 class JObject : public JData {
  private:
-  JVector<JOjectElement> obj_;
+  std::vector<JOjectElement> obj_;
 
  public:
-  JObject(){};
+  JObject() = default;
   explicit JObject(size_t length) { obj_.reserve(length); }
 
- public:
   const JOjectElement& operator[](int index) const { return this->obj_[index]; }
   JOjectElement& operator[](int index) { return this->obj_[index]; }
 
@@ -163,7 +162,8 @@ class JObject : public JData {
   const JString& get_key(size_t index) const { return obj_[index].get_key(); }
   const JNode& get_value(size_t index) const { return obj_[index].get_value(); }
 
- public:
+  JObject value() const { return JObject(*this); }
+
   size_t insert(size_t pos, JOjectElement& objm);
   size_t erase(size_t pos, size_t count = 1);
   void push_back(const JOjectElement& objm);

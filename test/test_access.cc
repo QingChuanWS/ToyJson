@@ -1,3 +1,4 @@
+#include "basic.h"
 #include "enum.h"
 #include "node.h"
 #include "parser.h"
@@ -17,33 +18,27 @@ static void test_access_boolean() {
   JNode jn;
   jn.data_set(JST_STR, "a", 1);
   jn = JNode(JST_TRUE);
-  bool data;
-  jn.jst_node_data_get(data);
-  EXPECT_TRUE(data);
+  EXPECT_TRUE(jn.type() == JST_TRUE ? true : false);
   jn.data_set(JST_FALSE);
-  jn.jst_node_data_get(data);
-  EXPECT_FALSE(data);
+  EXPECT_FALSE(jn.type() == JST_TRUE ? true : false);
 }
 
 static void test_access_number() {
   JNode jn;
   jn.data_set(JST_STR, "a", 1);
   jn = JNode(1234.5);
-  double num;
-  jn.jst_node_data_get(num);
+  double num = jn.data().as<JNumber>().value();
   EXPECT_EQ_DOUBLE(1234.5, num);
 }
 
 static void test_access_string() {
   JNode jn;
   jn.data_set(JST_STR, "", 0);
-  const char* str_head;
-  size_t str_len;
-  jn.jst_node_data_get(&str_head, str_len);
-  EXPECT_EQ_STRING("", str_head, str_len);
+  std::string str = jn.data().as<JString>().value();
+  EXPECT_EQ_STRING("", str.c_str(), str.size());
   jn = JNode(JString("Hello", 5));
-  jn.jst_node_data_get(&str_head, str_len);
-  EXPECT_EQ_STRING("Hello", str_head, str_len);
+  str = jn.data().as<JString>().value();
+  EXPECT_EQ_STRING("Hello", str.c_str(), str.size());
 }
 
 static void test_access_array() {
@@ -61,40 +56,35 @@ static void test_access_array() {
 
   EXPECT_EQ_SIZE_T(10, a.size());
   for (i = 0; i < 10; i++) {
-    double num;
-    a[i].jst_node_data_get(num);
+    auto num = a[i].data().as<JNumber>().value();
     EXPECT_EQ_DOUBLE((double)i, num);
   }
 
   a.pop_back();
   EXPECT_EQ_SIZE_T(9, a.size());
   for (i = 0; i < 9; i++) {
-    double num;
-    a[i].jst_node_data_get(num);
+    auto num = a[i].data().as<JNumber>().value();
     EXPECT_EQ_DOUBLE((double)i, num);
   }
 
   a.erase(4, 0);
   EXPECT_EQ_SIZE_T(9, a.size());
   for (i = 0; i < 9; i++) {
-    double num;
-    a[i].jst_node_data_get(num);
+    auto num = a[i].data().as<JNumber>().value();
     EXPECT_EQ_DOUBLE((double)i, num);
   }
 
   a.erase(8, 1);
   EXPECT_EQ_SIZE_T(8, a.size());
   for (i = 0; i < 8; i++) {
-    double num;
-    a[i].jst_node_data_get(num);
+    auto num = a[i].data().as<JNumber>().value();
     EXPECT_EQ_DOUBLE((double)i, num);
   }
 
   a.erase(0, 2);
   EXPECT_EQ_SIZE_T(6, a.size());
   for (i = 0; i < 6; i++) {
-    double num;
-    a[i].jst_node_data_get(num);
+    auto num = a[i].data().as<JNumber>().value();
     EXPECT_EQ_DOUBLE((double)i + 2, num);
   }
 
@@ -105,8 +95,7 @@ static void test_access_array() {
 
   EXPECT_EQ_SIZE_T(8, a.size());
   for (i = 0; i < 8; i++) {
-    double num;
-    a[i].jst_node_data_get(num);
+    auto num = a[i].data().as<JNumber>().value();
     EXPECT_EQ_DOUBLE((double)i, num);
   }
 
@@ -115,8 +104,7 @@ static void test_access_array() {
   EXPECT_EQ_SIZE_T(8, a.capacity());
   EXPECT_EQ_SIZE_T(8, a.size());
   for (i = 0; i < 8; i++) {
-    double num;
-    a[i].jst_node_data_get(num);
+    auto num = a[i].data().as<JNumber>().value();
     EXPECT_EQ_DOUBLE((double)i, num);
   }
 
@@ -146,40 +134,35 @@ static void test_access_vector() {
 
   EXPECT_EQ_SIZE_T(10, v.size());
   for (i = 0; i < 10; i++) {
-    double num;
-    v[i].jst_node_data_get(num);
+    auto num = v[i].data().as<JNumber>().value();
     EXPECT_EQ_DOUBLE((double)i, num);
   }
 
   v.pop_back();
   EXPECT_EQ_SIZE_T(9, v.size());
   for (i = 0; i < 9; i++) {
-    double num;
-    v[i].jst_node_data_get(num);
+    auto num = v[i].data().as<JNumber>().value();
     EXPECT_EQ_DOUBLE((double)i, num);
   }
 
   v.erase(4, 0);
   EXPECT_EQ_SIZE_T(9, v.size());
   for (i = 0; i < 9; i++) {
-    double num;
-    v[i].jst_node_data_get(num);
+    auto num = v[i].data().as<JNumber>().value();
     EXPECT_EQ_DOUBLE((double)i, num);
   }
 
   v.erase(8, 1);
   EXPECT_EQ_SIZE_T(8, v.size());
   for (i = 0; i < 8; i++) {
-    double num;
-    v[i].jst_node_data_get(num);
+    auto num = v[i].data().as<JNumber>().value();
     EXPECT_EQ_DOUBLE((double)i, num);
   }
 
   v.erase(0, 2);
   EXPECT_EQ_SIZE_T(6, v.size());
   for (i = 0; i < 6; i++) {
-    double num;
-    v[i].jst_node_data_get(num);
+    auto num = v[i].data().as<JNumber>().value();
     EXPECT_EQ_DOUBLE((double)i + 2, num);
   }
 
@@ -190,8 +173,7 @@ static void test_access_vector() {
 
   EXPECT_EQ_SIZE_T(8, v.size());
   for (i = 0; i < 8; i++) {
-    double num;
-    v[i].jst_node_data_get(num);
+    auto num = v[i].data().as<JNumber>().value();
     EXPECT_EQ_DOUBLE((double)i, num);
   }
 
@@ -200,8 +182,7 @@ static void test_access_vector() {
   EXPECT_EQ_SIZE_T(8, v.capacity());
   EXPECT_EQ_SIZE_T(8, v.size());
   for (i = 0; i < 8; i++) {
-    double num;
-    v[i].jst_node_data_get(num);
+    auto num = v[i].data().as<JNumber>().value();
     EXPECT_EQ_DOUBLE((double)i, num);
   }
 
@@ -296,8 +277,6 @@ static void test_access() {
   // test_access_object();
 }
 }  // namespace jst
-
-
 
 int main() {
 #ifdef _WINDOWS

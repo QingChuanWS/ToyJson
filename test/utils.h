@@ -47,82 +47,75 @@ namespace jst {
   EXPECT_EQ_BASE((expect) == (actual), (size_t)expect, (size_t)actual, "%zu")
 #endif
 
-#define TEST_ERROR(error, json)                   \
-  do {                                            \
-    JParser jc(json);                             \
+#define TEST_ERROR(error, json)               \
+  do {                                        \
+    JParser jc(json);                         \
     EXPECT_EQ_RET(error, jc.parser());        \
     EXPECT_EQ_TYPE(JST_NULL, jc.root.type()); \
   } while (0)
 
-#define TEST_NUMBER(expect, json)                 \
+#define TEST_NUMBER(expect, json)                      \
+  do {                                                 \
+    JParser jc(json);                                  \
+    EXPECT_EQ_RET(JST_PARSE_OK, jc.parser());          \
+    EXPECT_EQ_TYPE(JST_NUM, jc.root.type());           \
+    double num = jc.root.data().as<JNumber>().value(); \
+    EXPECT_EQ_DOUBLE(expect, num);                     \
+  } while (0)
+
+#define TEST_STRING(expect, json)                      \
+  do {                                                 \
+    JParser jc(json);                                  \
+    EXPECT_EQ_RET(JST_PARSE_OK, jc.parser());          \
+    EXPECT_EQ_TYPE(JST_STR, jc.root.type());           \
+    auto cur = jc.root.data().as<JString>().value();   \
+    EXPECT_EQ_STRING(expect, cur.c_str(), cur.size()); \
+  } while (0)
+
+#define TEST_ARRAY(expect, json)                      \
+  do {                                                \
+    JParser c(json);                                  \
+    EXPECT_EQ_RET(JST_PARSE_OK, c.parser());          \
+    EXPECT_EQ_TYPE(JST_ARR, c.root.type());           \
+    JArray arr = c.root.data().as<JArray>().value(); \
+    EXPECT_EQ_SIZE_T(expect, arr.size());             \
+  } while (0)
+
+#define TEST_NODE_STR(str, jn)                      \
+  do {                                              \
+    EXPECT_EQ_TYPE(JST_STR, jn.type());             \
+    auto cur = jn.data().as<JString>().value();     \
+    EXPECT_EQ_STRING(str, cur.c_str(), cur.size()); \
+  } while (0)
+
+#define TEST_NODE_NUM(expect, jn)                 \
   do {                                            \
-    JParser jc(json);                             \
-    EXPECT_EQ_RET(JST_PARSE_OK, jc.parser()); \
-    EXPECT_EQ_TYPE(JST_NUM, jc.root.type());  \
-    double num = 0.0;                             \
-    jc.root.jst_node_data_get(num);               \
+    EXPECT_EQ_TYPE(JST_NUM, jn.type());           \
+    double num = jn.data().as<JNumber>().value(); \
     EXPECT_EQ_DOUBLE(expect, num);                \
-  } while (0)
-
-#define TEST_STRING(expect, json)                 \
-  do {                                            \
-    JParser jc(json);                             \
-    EXPECT_EQ_RET(JST_PARSE_OK, jc.parser()); \
-    EXPECT_EQ_TYPE(JST_STR, jc.root.type());  \
-    const char* p;                                \
-    size_t len = 0;                               \
-    jc.root.jst_node_data_get(&p, len);           \
-    EXPECT_EQ_STRING(expect, p, len);             \
-  } while (0)
-
-#define TEST_ARRAY(expect, json)                 \
-  do {                                           \
-    JParser c(json);                             \
-    EXPECT_EQ_RET(JST_PARSE_OK, c.parser()); \
-    EXPECT_EQ_TYPE(JST_ARR, c.root.type());  \
-    JArray arr;                                  \
-    c.root.jst_node_data_get(arr);               \
-    EXPECT_EQ_SIZE_T(expect, arr.size());        \
-  } while (0)
-
-#define TEST_NODE_STR(str, jn)              \
-  do {                                      \
-    EXPECT_EQ_TYPE(JST_STR, jn.type()); \
-    const char* p = nullptr;                \
-    size_t len = 0;                         \
-    jn.jst_node_data_get(&p, len);          \
-    EXPECT_EQ_STRING(str, p, len);          \
-  } while (0)
-
-#define TEST_NODE_NUM(expect, jn)           \
-  do {                                      \
-    EXPECT_EQ_TYPE(JST_NUM, jn.type()); \
-    double num = 0.0;                       \
-    jn.jst_node_data_get(num);              \
-    EXPECT_EQ_DOUBLE(expect, num);          \
   } while (0)
 
 #define TEST_OBJ_KEY(str, key) EXPECT_EQ_STRING(str, key.c_str(), key.size());
 
-#define TEST_ROUNDTRIP(json)                                                    \
-  do {                                                                          \
-    JParser jc(json);                                                           \
+#define TEST_ROUNDTRIP(json)                                                \
+  do {                                                                      \
+    JParser jc(json);                                                       \
     EXPECT_EQ_INT(JST_PARSE_OK, jc.parser());                               \
-    char* json2;                                                                \
-    size_t length;                                                              \
+    char* json2;                                                            \
+    size_t length;                                                          \
     EXPECT_EQ_INT(JST_STRINGIFY_OK, jc.stringify(jc.root, &json2, length)); \
-    EXPECT_EQ_STRING(json, json2, length);                                      \
+    EXPECT_EQ_STRING(json, json2, length);                                  \
   } while (0)
 
-#define TEST_EQUAL(json1, json2, equality)             \
-  do {                                                 \
-    JParser jc(json1);                                 \
-    JNode jn_1;                                        \
+#define TEST_EQUAL(json1, json2, equality)         \
+  do {                                             \
+    JParser jc(json1);                             \
+    JNode jn_1;                                    \
     EXPECT_EQ_INT(JST_PARSE_OK, jc.parser(&jn_1)); \
-    jc.reset(json2);                                   \
-    JNode jn_2;                                        \
+    jc.reset(json2);                               \
+    JNode jn_2;                                    \
     EXPECT_EQ_INT(JST_PARSE_OK, jc.parser(&jn_2)); \
-    EXPECT_EQ_INT(equality, jn_1 == jn_2);             \
+    EXPECT_EQ_INT(equality, jn_1 == jn_2);         \
   } while (0)
 
 }  // namespace jst

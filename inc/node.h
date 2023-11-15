@@ -31,15 +31,8 @@ class JNode {
 
   JRetType data_set(JNType t, const char* str = nullptr, const size_t len = 0);
 
-  void jst_node_data_get(std::string& node_str) const;
-  void jst_node_data_get(const char** node_str, size_t& len) const;
-  void jst_node_data_get(double& node_num) const;
-  void jst_node_data_get(bool& node_bool) const;
-  void jst_node_data_get(JArray& arr) const;
-  void jst_node_data_get(JObject& obj) const;
-
   JNType type() const { return _type; }
-  JData data() const { return *_data; }
+  const JData& data() const { return *_data; }
 
  private:
   JRetType jst_node_parser_num(const std::string& str);
