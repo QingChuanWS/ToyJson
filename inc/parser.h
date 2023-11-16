@@ -12,7 +12,6 @@
 namespace jst {
 class JParser {
  public:
-  JParser() : str(""), root(), top(0), stack(nullptr), size(0), str_index(0) {}
   JParser(const std::string& j_str)
       : str(j_str), root(), top(0), stack(nullptr), size(0), str_index(0) {}
 
@@ -53,10 +52,10 @@ class JParser {
   void* stack_push(size_t size);
   void* stack_pop(size_t size);
 
-  std::string str;
-  int str_index;
-  char* stack;
-  size_t top, size;
+  std::string str = "";
+  int str_index = 0;
+  char* stack = nullptr;
+  size_t top = 0, size = 0;
 
   const size_t init_stack_size = 256;
 };

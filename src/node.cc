@@ -29,22 +29,20 @@ static shared_ptr<JData> jst_node_data_copy(JNType type, const JData& node) {
   }
 }
 
-JNode::JNode(JNType t, const char* str, size_t len) : _type(JST_NULL), _data(nullptr) {
-  _type = t;
+JNode::JNode(JNType t, const char* str, size_t len) : _type(t), _data(nullptr) {
   if (_type == JST_NUM) {
     if (len == 0) {
       jst_node_parser_num(std::string(str));
     } else {
       jst_node_parser_num(std::string(str, len));
     }
-  } else if (_type == JST_STR){
+  } else if (_type == JST_STR) {
     _data = std::make_shared<JString>(JString(str, len));
   }
 }
 
 // copy construct
-JNode::JNode(const JNode& node) {
-  _type = node._type;
+JNode::JNode(const JNode& node) : _type(node.type()) {
   _data = jst_node_data_copy(node._type, *node._data);
 }
 
@@ -56,9 +54,7 @@ JNode& JNode::operator=(const JNode& node) {
 }
 
 // move copy construct
-JNode::JNode(JNode&& node) noexcept {
-  _type = node._type;
-  _data = node._data;
+JNode::JNode(JNode&& node) noexcept : _type(node._type), _data(node._data) {
   node._data = nullptr;
   node._type = JST_NULL;
 }
@@ -144,7 +140,6 @@ JRetType JNode::jst_node_parser_num(const std::string& str) {
   _data = std::make_shared<JNumber>(JNumber(n));
   return ret;
 }
-
 
 JRetType JNode::data_set(JNType t, const char* str, const size_t len) {
   JST_DEBUG(t != JST_ARR);
